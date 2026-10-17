@@ -5,13 +5,19 @@ import {
   ReactFlow, Background, BackgroundVariant, useNodesState, useEdgesState, useReactFlow, useViewport, useOnSelectionChange,
   type Edge, type Node, type NodeChange,
 } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote, BoxSelect, X,
 } from "lucide-react";
 import { data, InsufficientCreditsError, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
-import { DEFAULT_MODEL, priceOf, musicDurationMs, type ModelKind } from "@/lib/data/prices";
+import { AUTO, DEFAULT_MODEL, priceOf, musicDurationMs, lockedFor, resolveModel, type ModelKind, type PlanId } from "@/lib/data/prices";
+import { moderate, flaggedMessage } from "@/lib/moderation";
+import { applyStyle } from "@/lib/data/styles";
+import { mentionedNodes } from "@/components/ui/mention-textarea";
+import { fileToNode } from "@/lib/upload";
+import { useLive } from "@/hooks/use-live";
+import { StylePicker } from "./style-picker";
 import { gen } from "@/lib/gen";
 import { mediaSize, GAP, SECTION_HEADER, CAPTION } from "@/lib/canvas";
 import { appendToTimeline, appendAudio } from "@/lib/agent/tools";
@@ -36,7 +42,7 @@ function toFlow(state: CanvasState, selected: Set<string>): Node[] {
     id: s.id, type: "section", position: { x: s.x, y: s.y }, data: { section: s },
     style: { width: s.w, height: s.collapsed ? 1 : s.h }, selectable: false, draggable: !s.locked,
   }));
-  const nodes: Node[] = state.nodes.map((n) => ({
+  const nodes: Node[] = state.nodes.filter((n) => !n.data.archived).map((n) => ({
     id: n.id,
     type: n.type === "text" ? "note" : "media",
     position: { x: n.x, y: n.y },
@@ -65,6 +71,26 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   const [preview, setPreview] = useState<CanvasNode | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showResources, setShowResources] = useState(false);
+  const [stylesOpen, setStylesOpen] = useState(false);
+  const ws = useLive(() => data.workspace(), []);
+  const styles = useLive(() => data.listStyles(), []);
+  const plan: PlanId = ws.value?.plan ?? "free";
+  const style = styles.value?.find((s) => s.id === project.styleId) ?? null;
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const importFiles = async (files: FileList | null) => {
+    const list = Array.from(files ?? []);
+    const p = centerPoint();
+    const errors: string[] = [];
+    let i = 0;
+    for (const f of list) {
+      const r = await fileToNode(f);
+      if (!r.ok) { errors.push(r.error); continue; }
+      await data.upsertNode({ ...r.node, projectId: project.id, sectionId: null, x: p.x + i * 60, y: p.y + i * 60 });
+      i++;
+    }
+    setNotice(errors.length ? errors.join(" ") : `${i} fichier${i > 1 ? "s importés" : " importé"}.`);
+  };
 
   useEffect(() => {
     setNodes(toFlow(state, selected));
@@ -83,10 +109,24 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   const byId = useMemo(() => new Map(state.nodes.map((n) => [n.id, n])), [state.nodes]);
 
+  /** Centre de l'écran, décalé vers le bas jusqu'à une zone libre (ni plan ni section). */
   const centerPoint = () => {
     const el = document.querySelector(".react-flow") as HTMLElement | null;
     const r = el?.getBoundingClientRect();
-    return flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2 - 120, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 - 160 });
+    const c = flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2 - 120, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 - 160 });
+    const { w, h } = mediaSize(project.aspectRatio);
+    const boxes = [
+      ...state.sections.map((s) => ({ x: s.x, y: s.y - SECTION_HEADER, w: s.w, h: s.h + SECTION_HEADER })),
+      ...state.nodes.filter((n) => !n.sectionId && !n.data.archived).map((n) => ({ x: n.x, y: n.y, w, h: h + CAPTION })),
+    ];
+    const hits = (y: number) => boxes.find((b) => c.x < b.x + b.w && c.x + w > b.x && y < b.y + b.h && y + h + CAPTION > b.y);
+    let y = c.y;
+    for (let i = 0; i < 50; i++) {
+      const b = hits(y);
+      if (!b) break;
+      y = b.y + b.h + GAP;
+    }
+    return { x: c.x, y };
   };
 
   type GenAction = NonNullable<CanvasNode["data"]["action"]>;
@@ -94,21 +134,36 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
     generate_image: { name: "Nouvelle image", kind: "image" },
     generate_video: { name: "Image vers vidéo", kind: "video" },
     character_ref: { name: "Personnage dans une scène", kind: "character" },
+    edit_image: { name: "Modifier l'image", kind: "edit" },
     generate_voice: { name: "Nouvelle voix", kind: "voice" },
     generate_music: { name: "Nouvelle musique", kind: "music" },
   };
 
+  /** Première position libre (sans chevauchement) dans le même parent, en descendant. */
+  const freePosition = async (sectionId: string | null, x: number, y: number) => {
+    const { w, h } = mediaSize(project.aspectRatio);
+    const step = h + CAPTION + GAP;
+    const siblings = state.nodes.filter((n) => n.sectionId === sectionId && !n.data.archived);
+    let py = y;
+    while (siblings.some((n) => Math.abs(n.x - x) < w + 20 && Math.abs(n.y - py) < step - 20)) py += step;
+    const section = sectionId ? state.sections.find((s) => s.id === sectionId) : null;
+    if (section && (x + w + GAP > section.w || py + step > section.h)) {
+      await data.upsertSection({ ...section, w: Math.max(section.w, x + w + GAP), h: Math.max(section.h, py + step) });
+    }
+    return { x, y: py };
+  };
+
   const addGenerator = async (action: GenAction, from?: CanvasNode) => {
-    const p = from ? { x: from.x + mediaSize(project.aspectRatio).w + 80, y: from.y } : centerPoint();
+    const p = from ? await freePosition(from.sectionId, from.x + mediaSize(project.aspectRatio).w + 80, from.y) : centerPoint();
     const meta = GEN_META[action];
     const node: CanvasNode = {
       id: crypto.randomUUID(), projectId: project.id, sectionId: from?.sectionId ?? null, type: "generator",
       name: meta.name, x: p.x, y: p.y,
-      data: { action, model: DEFAULT_MODEL[meta.kind], status: "idle" },
+      data: { action, model: AUTO, status: "idle" },
     };
     await data.upsertNode(node);
     if (from) {
-      const role = action === "character_ref" ? "character_ref" : "start_frame";
+      const role = action === "character_ref" ? "character_ref" : action === "edit_image" ? "source" : "start_frame";
       await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role });
     }
     setNodes((ns) => ns.map((n) => ({ ...n, selected: false })));
@@ -118,11 +173,20 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   const actions: CanvasActions = {
     ratio: project.aspectRatio,
-    async runGenerator(node, { prompt, model, voice }) {
+    async runGenerator(node, { prompt, model, voice, seconds, endFrameId }) {
       const action = node.data.action ?? "generate_image";
       const kind = GEN_META[action].kind;
+      // 1. Modération : refusé sans débit.
+      const mod = moderate(prompt);
+      if (!mod.ok) {
+        await data.upsertNode({ ...node, data: { ...node.data, prompt, status: "flagged", error: flaggedMessage(mod.reason) } });
+        return;
+      }
+      // 2. Plan : un modèle verrouillé ne se lance pas.
+      if (lockedFor(kind, model, plan)) return actions.upgrade();
+      const used = resolveModel(kind, model);
       const key = `gen:${node.id}:${Date.now()}`;
-      const cost = priceOf(kind, model);
+      const cost = priceOf(kind, model, seconds);
       try {
         await data.spend(cost, key);
       } catch (e) {
@@ -133,39 +197,70 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
         }
         throw e;
       }
-      const running = { ...node, data: { ...node.data, prompt, model, voice, status: "running" as const, error: undefined } };
+      const visual = kind === "image" || kind === "video" || kind === "character" || kind === "edit";
+      const styled = visual ? applyStyle(prompt, style) : prompt;
+      const running = { ...node, data: { ...node.data, prompt, model, voice, seconds, styleName: visual ? style?.name : undefined, status: "running" as const, error: undefined } };
       await data.upsertNode(running);
       const sources = (role: string) => state.edges.filter((e) => e.to === node.id && e.role === role).map((e) => byId.get(e.from)).filter((n): n is CanvasNode => !!n?.data.mediaUrl);
+      const cited = mentionedNodes(prompt, state.nodes).filter((n) => n.type === "image" && n.data.mediaUrl);
+      // Les plans cités avec @ deviennent des références (reliées sur la toile).
+      for (const c of cited) {
+        if (!state.edges.some((e) => e.from === c.id && e.to === node.id)) {
+          await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: c.id, to: node.id, role: kind === "video" ? "start_frame" : "character_ref" });
+        }
+      }
       try {
-        if (kind === "image" || kind === "character") {
-          const r = kind === "image"
-            ? await gen.image({ prompt, model, aspectRatio: project.aspectRatio })
-            : await (async () => {
-                const refs = sources("character_ref");
-                if (!refs.length) throw new Error("no_reference");
-                return gen.character({ prompt, model, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })) });
-              })();
+        if (kind === "image" || kind === "character" || kind === "edit") {
+          let r;
+          if (kind === "edit") {
+            const src = sources("source")[0] ?? cited[0];
+            if (!src) throw new Error("no_source");
+            r = await gen.edit({ instruction: styled, model: used, aspectRatio: project.aspectRatio, source: { url: src.data.mediaUrl!, prompt: src.data.prompt, name: src.name } });
+          } else {
+            const refs = [...sources("character_ref"), ...cited];
+            if (kind === "character" && !refs.length) throw new Error("no_reference");
+            r = refs.length
+              ? await gen.character({ prompt: styled, model: used, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })) })
+              : await gen.image({ prompt: styled, model: used, aspectRatio: project.aspectRatio });
+          }
           await data.upsertNode({ ...running, type: "image", data: { ...running.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
           if (!project.thumbnailUrl) await data.updateProject(project.id, { thumbnailUrl: r.url });
         } else if (kind === "video") {
-          const frame = sources("start_frame")[0]?.data.mediaUrl;
+          const start = sources("start_frame")[0] ?? cited[0];
+          const frame = start?.data.posterUrl ?? start?.data.mediaUrl;
           if (!frame) throw new Error("no_start_frame");
-          const r = await gen.video({ prompt, model, startFrameUrl: frame, aspectRatio: project.aspectRatio });
-          await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: r.width, height: r.height, durationMs: r.durationMs } });
+          if (endFrameId) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: endFrameId, to: node.id, role: "end_frame" });
+          const r = await gen.video({ prompt: styled, model: used, startFrameUrl: frame, aspectRatio: project.aspectRatio });
+          const durationMs = (seconds ?? 5) * 1000;
+          await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: r.width, height: r.height, durationMs } });
         } else {
           const r = kind === "voice"
-            ? await gen.voice({ text: prompt, voice: voice ?? "claire", model })
-            : await gen.music({ prompt, model, durationMs: musicDurationMs(model) });
+            ? await gen.voice({ text: prompt, voice: voice ?? "claire", model: used })
+            : await gen.music({ prompt, model: used, durationMs: musicDurationMs(used) });
           await data.upsertNode({ ...running, type: "audio", name: running.name.startsWith("Nouvelle") ? titleFrom(prompt).slice(0, 32) : running.name, data: { ...running.data, status: "done", mediaUrl: r.url, durationMs: r.durationMs } });
         }
       } catch (err) {
         await data.refund(cost, key);
         const code = err instanceof Error ? err.message : "";
-        const msg = code === "no_start_frame" ? "Reliez une image de départ à ce nœud. Crédits rendus."
+        const msg = code === "no_start_frame" ? "Reliez ou citez (@) une image de départ. Crédits rendus."
           : code === "no_reference" ? "Reliez une image du personnage à ce nœud. Crédits rendus."
+          : code === "no_source" ? "Reliez ou citez (@) l'image à modifier. Crédits rendus."
           : "La génération n'a pas abouti. Vos crédits ont été rendus.";
         await data.upsertNode({ ...running, data: { ...running.data, status: "failed", error: msg } });
       }
+    },
+    plan,
+    media: state.nodes.filter((n) => ["image", "video", "audio"].includes(n.type) && n.data.mediaUrl && !n.data.archived),
+    upgrade() {
+      setNotice("Ce modèle est réservé à un plan supérieur. Les abonnements arrivent avec Stripe ; en attendant, la page Tarifs détaille les plans.");
+      router.push("/pricing");
+    },
+    async editFrom(node) {
+      await addGenerator("edit_image", node);
+    },
+    async archive(node) {
+      await data.upsertNode({ ...node, data: { ...node.data, archived: true } });
+      setNotice(`« ${node.name} » archivé. Retrouvez-le dans Ressources > Archivés.`);
     },
     async characterFrom(node) {
       await addGenerator("character_ref", node);
@@ -269,9 +364,12 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   return (
     <CanvasActionsContext.Provider value={actions}>
       <div className="relative size-full bg-canvas"
+        onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}
+        onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); importFiles(e.dataTransfer.files); } }}
         onKeyDown={(e) => {
           const t = e.target as HTMLElement;
           if (t.closest("input, textarea, select, [contenteditable]")) return;
+          if (e.key === "Escape") { setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n))); return; }
           if ((e.metaKey || e.ctrlKey) && e.key === "c") { copy(); return; }
           if ((e.metaKey || e.ctrlKey) && e.key === "v") { e.preventDefault(); paste(); return; }
           if ((e.metaKey || e.ctrlKey) && e.key === "1") { e.preventDefault(); flow.fitView({ padding: 0.25, duration: 200 }); return; }
@@ -310,7 +408,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
                 <IconButton tone="solid" label="Ajouter" icon={<Plus className="size-5" />} />
               </MenuTrigger>
               <MenuContent side="right">
-                <MenuItem icon={<Upload />} disabled>Importer un fichier (bientôt)</MenuItem>
+                <MenuItem icon={<Upload />} onSelect={() => fileInput.current?.click()}>Importer un fichier</MenuItem>
                 <MenuItem icon={<StickyNote />} onSelect={addNote}>Note</MenuItem>
                 <MenuItem icon={<ImageIcon />} onSelect={() => addGenerator("generate_image")}>Générer une image</MenuItem>
                 <MenuSub>
@@ -337,6 +435,21 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           </VerticalToolbar>
         </div>
 
+        <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2">
+          <label className="sr-only" htmlFor="project-ratio">Format du projet</label>
+          <select id="project-ratio" value={project.aspectRatio} title="Format des prochaines générations"
+            onChange={(e) => data.updateProject(project.id, { aspectRatio: e.target.value as Project["aspectRatio"] })}
+            className="h-9 border border-border bg-surface px-2 text-sm text-text-muted shadow-toolbar">
+            {["16:9", "9:16", "1:1", "21:9", "4:3", "3:4", "5:4"].map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <button onClick={() => setStylesOpen(true)} className="h-9 border border-dashed border-border-input bg-surface px-3 text-sm uppercase tracking-wide shadow-toolbar hover:bg-surface-sunken">
+            {style ? style.name : "Aucun style"}<span className="sr-only"> : changer de style</span>
+          </button>
+        </div>
+        <input ref={fileInput} type="file" multiple hidden accept="image/*,video/*,audio/*" onChange={(e) => { importFiles(e.target.files); e.target.value = ""; }} aria-label="Importer des fichiers" />
+        <StylePicker open={stylesOpen} onOpenChange={setStylesOpen} value={project.styleId}
+          onPick={async (s) => { await data.updateProject(project.id, { styleId: s?.id ?? null }); setStylesOpen(false); setNotice(s ? `Style « ${s.name} » appliqué aux prochaines générations.` : "Style retiré."); }} />
+
         {showResources && (
           <div className="absolute left-20 top-4 z-20 flex max-h-[calc(100%-2rem)] w-96 flex-col border border-text bg-surface shadow-pop">
             <div className="flex items-center justify-between border-b border-border px-4 py-2">
@@ -344,6 +457,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
               <IconButton label="Fermer les ressources" className="size-8" icon={<X className="size-4" />} onClick={() => setShowResources(false)} />
             </div>
             <ResourceList nodes={state.nodes} sections={state.sections} selected={selected}
+              onRestore={(n) => data.upsertNode({ ...n, data: { ...n.data, archived: false } })}
               onPick={(n) => {
                 setNodes((ns) => ns.map((x) => ({ ...x, selected: x.id === n.id })));
                 const abs = flow.getInternalNode(n.id)?.internals.positionAbsolute;

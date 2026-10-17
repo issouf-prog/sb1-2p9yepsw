@@ -13,6 +13,8 @@ import { useLive } from "@/hooks/use-live";
 import { data, type Project } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { DEMO_FILMS } from "@/lib/seed/films";
+import { StylePicker } from "@/components/project/style-picker";
+import type { Style } from "@/lib/data";
 
 const EXAMPLES = [
   "Un conte pour enfants sur une petite renarde courageuse",
@@ -25,11 +27,13 @@ function Home() {
   const box = useRef<PromptBoxHandle>(null);
   const [ratio, setRatio] = useState<Ratio>("16:9");
   const [busy, setBusy] = useState(false);
+  const [style, setStyle] = useState<Style | null>(null);
+  const [picking, setPicking] = useState(false);
   const projects = useLive(() => data.listProjects(), []);
 
   const start = async (prompt?: string, view?: string) => {
     setBusy(true);
-    const p = await data.createProject({ aspectRatio: ratio, prompt });
+    const p = await data.createProject({ aspectRatio: ratio, prompt, styleId: style?.id ?? null });
     router.push(`/p/${p.id}${view ? `?view=${view}` : ""}`);
   };
 
@@ -38,12 +42,14 @@ function Home() {
       <section id="nouveau" aria-labelledby="titre" className="mx-auto max-w-[var(--size-prompt-max)] pt-16 text-center sm:pt-24">
         <h1 id="titre" className="text-2xl sm:text-display">Quel film fait-on aujourd&apos;hui ?</h1>
         <p className="mt-3 text-lg text-text-muted">Décrivez l&apos;idée : l&apos;agent écrit, génère et monte avec vous.</p>
-        <PromptBox ref={box} className="mt-10 text-left" placeholder={EXAMPLES[0] + "…"} ratio={ratio} onRatioChange={setRatio} busy={busy} onSubmit={(t) => start(t)} />
+        <PromptBox ref={box} className="mt-10 text-left" placeholder={EXAMPLES[0] + "…"} ratio={ratio} onRatioChange={setRatio} busy={busy} onSubmit={(t) => start(t)}
+          styleLabel={style?.name ?? "Aucun style"} onStyleClick={() => setPicking(true)} />
+        <StylePicker open={picking} onOpenChange={setPicking} value={style?.id ?? null} onPick={(s) => { setStyle(s); setPicking(false); box.current?.focus(); }} />
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <Chip onClick={() => start(undefined, "story")}>Du scénario au film</Chip>
           <Chip onClick={() => box.current?.focus()}>Du prompt au film</Chip>
           <Chip onClick={() => box.current?.setText("Crée la fiche de mon personnage principal : ")}>Créer des personnages</Chip>
-          <Chip title="Bientôt" aria-disabled className="opacity-60">Partir d&apos;un style</Chip>
+          <Chip onClick={() => setPicking(true)}>Partir d&apos;un style</Chip>
           <Chip onClick={() => start()}>Toile vide</Chip>
           <Chip title="Bientôt" aria-disabled className="opacity-60">Découvrir</Chip>
         </div>
@@ -76,6 +82,11 @@ function Home() {
           {DEMO_FILMS.slice(0, 3).map((f) => <FilmCard key={f.id} {...f} />)}
         </div>
       </section>
+      <footer className="mt-20 flex gap-6 border-t border-border pt-6 text-sm text-text-muted">
+        <Link href="/pricing" className="hover:text-text">Tarifs</Link>
+        <Link href="/legal/cgu" className="hover:text-text">Conditions d&apos;utilisation</Link>
+        <Link href="/legal/confidentialite" className="hover:text-text">Confidentialité</Link>
+      </footer>
     </main>
   );
 }

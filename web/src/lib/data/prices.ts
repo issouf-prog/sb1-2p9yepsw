@@ -11,7 +11,11 @@ export const MODELS = {
     { id: "vid-cinema", label: "Cinéma 8 s + son", credits: 320, minPlan: "pro" as const },
   ],
   character: [
-    { id: "char-quality", label: "Personnage cohérent", credits: 12 },
+    { id: "char-quality", label: "Personnage cohérent", credits: 12, minPlan: "standard" as const },
+  ],
+  edit: [
+    { id: "edit-fast", label: "Retouche rapide", credits: 4 },
+    { id: "edit-quality", label: "Retouche précise", credits: 8 },
   ],
   voice: [
     { id: "voice-standard", label: "Voix naturelle", credits: 8 },
@@ -26,8 +30,27 @@ export const MODELS = {
 export type ModelKind = keyof typeof MODELS;
 
 export const DEFAULT_MODEL = {
-  image: "img-quality", video: "vid-standard", character: "char-quality", voice: "voice-standard", music: "music-15",
+  image: "img-quality", video: "vid-standard", character: "char-quality", voice: "voice-standard", music: "music-15", edit: "edit-quality",
 } as const;
+
+/** « Auto » : l'app choisit le modèle par défaut du type. */
+export const AUTO = "auto";
+export const resolveModel = (kind: ModelKind, model: string) => (model === AUTO ? DEFAULT_MODEL[kind] : model);
+
+const PLAN_RANK = { free: 0, casual: 1, standard: 2, pro: 3, studio: 4, enterprise: 5 } as const;
+export type PlanId = keyof typeof PLAN_RANK;
+export const PLAN_LABEL: Record<PlanId, string> = {
+  free: "Gratuit", casual: "Découverte", standard: "Créateur", pro: "Pro", studio: "Studio", enterprise: "Entreprise",
+};
+
+/** Plan minimum requis par un modèle, ou null s'il est accessible. */
+export function lockedFor(kind: ModelKind, model: string, plan: PlanId): PlanId | null {
+  const m = (MODELS[kind] as readonly { id: string; minPlan?: PlanId }[]).find((x) => x.id === resolveModel(kind, model));
+  return m?.minPlan && PLAN_RANK[plan] < PLAN_RANK[m.minPlan] ? m.minPlan : null;
+}
+
+/** Durées possibles d'une vidéo ; le prix des modèles est donné pour 5 s. */
+export const VIDEO_SECONDS = [5, 10] as const;
 
 /** Voix proposées (noms fictifs, écrits pour ce projet). */
 export const VOICES = [
@@ -37,10 +60,11 @@ export const VOICES = [
   { id: "victor", label: "Victor", desc: "homme âgé, grave", pitch: 100 },
 ] as const;
 
-export function priceOf(kind: ModelKind, model: string): number {
-  const m = (MODELS[kind] as readonly { id: string; credits: number }[]).find((x) => x.id === model);
+export function priceOf(kind: ModelKind, model: string, seconds = 5): number {
+  const id = resolveModel(kind, model);
+  const m = (MODELS[kind] as readonly { id: string; credits: number }[]).find((x) => x.id === id);
   if (!m) throw new Error(`modèle inconnu : ${model}`);
-  return m.credits;
+  return kind === "video" ? Math.round((m.credits * seconds) / 5) : m.credits;
 }
 
 export const musicDurationMs = (model: string) => (model === "music-30" ? 30000 : 15000);

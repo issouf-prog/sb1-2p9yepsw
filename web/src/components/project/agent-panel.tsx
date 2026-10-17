@@ -10,6 +10,8 @@ import { useLive } from "@/hooks/use-live";
 import { IconButton } from "@/components/ui/icon-button";
 import { Chip } from "@/components/ui/chip";
 import { ActionCard, AssetChip, UserMessage, AgentMessage } from "@/components/ui/agent";
+import { MentionTextarea } from "@/components/ui/mention-textarea";
+import { fileToNode } from "@/lib/upload";
 import { Button } from "@/components/ui/button";
 import { Menu, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { useApp } from "@/components/app/app-context";
@@ -36,7 +38,42 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
   const msgs = useLive(() => (active ? data.listMessages(active.id) : Promise.resolve([] as ChatMessage[])), [active?.id], projectId);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const attach = useRef<HTMLInputElement>(null);
+
+  /** Pièces jointes : importées sur la toile puis citées dans le message. */
+  const attachFiles = async (files: FileList | null) => {
+    // Copie immédiate : la FileList est vidée quand on réinitialise le champ.
+    const list = Array.from(files ?? []);
+    const canvasNow = await data.canvas(projectId);
+    const x = Math.max(80, ...canvasNow.sections.map((s) => s.x + s.w + 80), ...canvasNow.nodes.map((n) => n.x + 360));
+    let i = 0;
+    for (const f of list) {
+      const r = await fileToNode(f);
+      if (!r.ok) { setHint(r.error); continue; }
+      await data.upsertNode({ ...r.node, projectId, sectionId: null, x, y: 80 + i * 320 });
+      setText((t) => `${t}${t && !t.endsWith(" ") ? " " : ""}@${r.node.name.replace(/\s+/g, "_")} `);
+      i++;
+    }
+  };
+
+  /** Dictée : reconnaissance vocale du navigateur (Chrome, Edge, Safari). */
+  const dictate = () => {
+    type SR = { lang: string; interimResults: boolean; start(): void; stop(): void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
+    const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
+    const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!Ctor) return setHint("La dictée n'est pas disponible dans ce navigateur. Essayez Chrome ou Edge.");
+    const rec = new Ctor();
+    rec.lang = "fr-FR";
+    rec.interimResults = false;
+    rec.onresult = (e) => { const said = Array.from(e.results).map((r) => r[0].transcript).join(" "); setText((t) => `${t}${t ? " " : ""}${said}`); };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => { setListening(false); setHint("Micro indisponible ou refusé."); };
+    setListening(true);
+    rec.start();
+  };
 
   const send = async (content: string, conv?: Conversation) => {
     const c = conv ?? active ?? (await data.createConversation(projectId, content.slice(0, 40)));
@@ -158,18 +195,22 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
         )}
         <form onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) { send(text.trim()); setText(""); } }}>
           <label htmlFor="agent-input" className="sr-only">Message à l&apos;agent</label>
-          <textarea id="agent-input" value={text} rows={3} maxLength={4000} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
+          <MentionTextarea id="agent-input" value={text} onValueChange={setText} nodes={nodes} rows={3} maxLength={4000}
+            onEnter={() => (document.getElementById("agent-input") as HTMLTextAreaElement | null)?.form?.requestSubmit()}
             placeholder="Demandez une scène, un plan, une variante… (@ pour citer un plan)"
             className="block w-full resize-none bg-transparent px-2 py-1 text-lg outline-none placeholder:text-text-subtle" />
+          {hint && <p role="status" className="px-2 text-sm text-text-muted">{hint} <button type="button" className="underline" onClick={() => setHint(null)}>OK</button></p>}
+          <input ref={attach} type="file" multiple hidden accept="image/*,video/*,audio/*" aria-label="Joindre des fichiers" onChange={(e) => { attachFiles(e.target.files); e.target.value = ""; }} />
           <div className="flex items-center gap-1">
-            <IconButton label="Joindre un fichier (bientôt)" aria-disabled icon={<Paperclip className="size-5 text-text-muted" />} />
-            <IconButton label="Citer un plan (bientôt)" aria-disabled icon={<AtSign className="size-5 text-text-muted" />} />
+            <IconButton type="button" label="Joindre un fichier" icon={<Paperclip className="size-5 text-text-muted" />} onClick={() => attach.current?.click()} />
+            <IconButton type="button" label="Citer un plan" icon={<AtSign className="size-5 text-text-muted" />}
+              onClick={() => { setText((t) => `${t}${t && !t.endsWith(" ") ? " " : ""}@`); requestAnimationFrame(() => document.getElementById("agent-input")?.focus()); }} />
             <span className="ml-auto mr-2 text-sm text-text-muted" title="L'agent choisit le modèle">Auto</span>
             {text.trim() ? (
               <IconButton tone="round" type="submit" label="Envoyer" disabled={busy} icon={<ArrowUp className="size-5" />} />
             ) : (
-              <IconButton tone="round" type="button" label="Dicter (bientôt)" aria-disabled icon={<Mic className={cn("size-5")} />} />
+              <IconButton tone="round" type="button" label={listening ? "Écoute en cours…" : "Dicter"} active={listening} onClick={dictate}
+                icon={<Mic className={cn("size-5", listening && "animate-pulse")} />} />
             )}
           </div>
         </form>

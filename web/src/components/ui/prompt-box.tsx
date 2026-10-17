@@ -20,10 +20,11 @@ export const PromptBox = forwardRef<PromptBoxHandle, {
   styleLabel?: string;
   ratio?: Ratio;
   onRatioChange?: (r: Ratio) => void;
+  onStyleClick?: () => void;
   onSubmit?: (text: string) => void;
   busy?: boolean;
   className?: string;
-}>(function PromptBox({ placeholder, styleLabel = "Aucun style", ratio = "16:9", onRatioChange, onSubmit, busy, className }, ref) {
+}>(function PromptBox({ placeholder, styleLabel = "Aucun style", ratio = "16:9", onRatioChange, onStyleClick, onSubmit, busy, className }, ref) {
   const [text, setText] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => ({ focus: () => area.current?.focus(), setText: (t) => { setText(t); area.current?.focus(); } }));
@@ -51,8 +52,8 @@ export const PromptBox = forwardRef<PromptBoxHandle, {
         <IconButton label="Joindre un fichier (bientôt)" aria-disabled icon={<Paperclip className="size-5 text-text-muted" />} />
         <IconButton label="Ajouter une note (bientôt)" aria-disabled icon={<StickyNote className="size-5 text-text-muted" />} />
         <div className="ml-auto flex items-center gap-2">
-          <button type="button" title="Les styles arrivent bientôt" className="hidden h-9 border border-dashed border-border-input px-3 text-sm uppercase tracking-wide text-text hover:bg-surface-sunken sm:block">
-            {styleLabel}
+          <button type="button" onClick={onStyleClick} className="hidden h-9 max-w-48 truncate border border-dashed border-border-input px-3 text-sm uppercase tracking-wide text-text hover:bg-surface-sunken sm:block">
+            {styleLabel}<span className="sr-only"> : choisir un style</span>
           </button>
           <Menu>
             <MenuTrigger asChild>

@@ -3,7 +3,7 @@
 
 import type {
   CanvasEdge, CanvasNode, CanvasState, ChatMessage, Conversation, Profile, Project, QuoteItem, Section, Workspace, AspectRatio,
-  StoryDocument, Timeline,
+  StoryDocument, Timeline, Style,
 } from "./types";
 
 export interface DataLayer {
@@ -14,8 +14,12 @@ export interface DataLayer {
   workspace(): Promise<Workspace>;
   listProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | null>;
-  createProject(input: { name?: string; aspectRatio: AspectRatio; prompt?: string }): Promise<Project>;
-  updateProject(id: string, patch: Partial<Pick<Project, "name" | "aspectRatio" | "thumbnailUrl" | "pendingPrompt" | "visibility" | "linkAccess" | "invites">>): Promise<Project>;
+  createProject(input: { name?: string; aspectRatio: AspectRatio; prompt?: string; styleId?: string | null }): Promise<Project>;
+  updateProject(id: string, patch: Partial<Pick<Project, "name" | "aspectRatio" | "thumbnailUrl" | "pendingPrompt" | "visibility" | "linkAccess" | "invites" | "styleId">>): Promise<Project>;
+
+  /** Catalogue + styles du workspace. */
+  listStyles(): Promise<Style[]>;
+  createStyle(input: { name: string; referenceUrls: string[]; promptSuffix?: string }): Promise<Style>;
   deleteProject(id: string): Promise<void>;
 
   canvas(projectId: string): Promise<CanvasState>;
@@ -46,6 +50,8 @@ export interface DataLayer {
   refund(amount: number, key: string): Promise<number>;
   /** Recharge (simulée tant que Stripe n'est pas branché). */
   topUp(amount: number): Promise<number>;
+  /** Changement de plan (simulé ; Stripe Checkout + webhook avec le backend). Crédite les crédits du plan. */
+  choosePlan(plan: Workspace["plan"], credits: number): Promise<Workspace>;
 
   /** Temps réel : appelé à chaque changement de données du projet (ou global si projectId = "*"). */
   subscribe(projectId: string, cb: () => void): () => void;

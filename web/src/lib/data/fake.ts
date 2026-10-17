@@ -6,9 +6,10 @@ import {
   InsufficientCreditsError,
   ConflictError,
   type CanvasEdge, type CanvasNode, type ChatMessage, type Conversation, type Profile, type Project, type Section, type Workspace,
-  type StoryDocument, type Timeline,
+  type StoryDocument, type Timeline, type Style,
 } from "./types";
 import { priceOf } from "./prices";
+import { STYLE_CATALOG } from "./styles";
 
 interface Db {
   me: Profile | null;
@@ -20,6 +21,7 @@ interface Db {
   conversations: Conversation[];
   messages: ChatMessage[];
   documents?: StoryDocument[];
+  styles?: Style[];
   timelines?: Timeline[];
   ledgerKeys: string[];
 }
@@ -93,14 +95,14 @@ export const fakeData: DataLayer = {
     // Projets créés avant le partage : valeurs par défaut.
     return p ? clone({ ...p, linkAccess: p.linkAccess ?? "none", invites: p.invites ?? [] }) : null;
   },
-  async createProject({ name, aspectRatio, prompt }) {
+  async createProject({ name, aspectRatio, prompt, styleId }) {
     const db = load();
     const p: Project = {
       id: crypto.randomUUID(),
       workspaceId: db.workspace.id,
       name: name?.trim() || (prompt ? titleFrom(prompt) : "Sans titre"),
       aspectRatio,
-      styleId: null,
+      styleId: styleId ?? null,
       visibility: "private",
       thumbnailUrl: null,
       linkAccess: "none",
@@ -134,6 +136,21 @@ export const fakeData: DataLayer = {
     db.documents = (db.documents ?? []).filter((d) => d.projectId !== id);
     db.timelines = (db.timelines ?? []).filter((t) => t.projectId !== id);
     commit("*");
+  },
+
+  async listStyles() {
+    const db = load();
+    return clone([...STYLE_CATALOG, ...(db.styles ?? []).filter((s) => s.workspaceId === db.workspace.id)]);
+  },
+  async createStyle({ name, referenceUrls, promptSuffix }) {
+    const db = load();
+    const s: Style = {
+      id: crypto.randomUUID(), name, workspaceId: db.workspace.id, referenceUrls: referenceUrls.slice(0, 5),
+      promptSuffix: promptSuffix ?? `dans le style « ${name} » défini par ses images de référence`, createdAt: now(),
+    };
+    db.styles = [...(db.styles ?? []), s];
+    commit("*");
+    return clone(s);
   },
 
   async canvas(projectId) {
@@ -251,6 +268,13 @@ export const fakeData: DataLayer = {
       commit("*");
     }
     return db.workspace.creditBalance;
+  },
+  async choosePlan(plan, credits) {
+    const db = load();
+    db.workspace.plan = plan;
+    db.workspace.creditBalance += credits;
+    commit("*");
+    return clone(db.workspace);
   },
   async topUp(amount) {
     const db = load();

@@ -45,7 +45,7 @@ export interface Section {
 }
 
 export type NodeType = "text" | "image" | "video" | "audio" | "generator";
-export type GenStatus = "idle" | "running" | "done" | "failed";
+export type GenStatus = "idle" | "running" | "done" | "failed" | "flagged";
 
 export interface CanvasNode {
   id: string;
@@ -59,7 +59,14 @@ export interface CanvasNode {
   data: {
     prompt?: string;
     model?: string;
-    action?: "generate_image" | "generate_video" | "generate_voice" | "generate_music" | "character_ref";
+    action?: "generate_image" | "generate_video" | "generate_voice" | "generate_music" | "character_ref" | "edit_image";
+    /** Durée demandée pour une vidéo (s). */
+    seconds?: number;
+    /** Style appliqué au moment de la génération. */
+    styleName?: string;
+    archived?: boolean;
+    /** Fichier importé par l'utilisateur (pas généré). */
+    uploaded?: boolean;
     /** Voix choisie (generate_voice). */
     voice?: string;
     status?: GenStatus;
@@ -74,6 +81,18 @@ export interface CanvasNode {
 }
 
 export type EdgeRole = "prompt" | "start_frame" | "end_frame" | "character_ref" | "scene_ref" | "source";
+
+export interface Style {
+  id: string;
+  name: string;
+  /** Ajouté à la fin des prompts d'image et de vidéo. */
+  promptSuffix: string;
+  /** Catalogue (null) ou style créé par l'utilisateur. */
+  workspaceId: string | null;
+  /** Images de référence d'un style perso (1 à 5). */
+  referenceUrls: string[];
+  createdAt: string;
+}
 
 export interface CanvasEdge {
   id: string;
@@ -121,7 +140,7 @@ export interface CanvasState {
 }
 
 export interface QuoteItem {
-  kind: "image" | "video" | "voice" | "music" | "character";
+  kind: "image" | "video" | "voice" | "music" | "character" | "edit";
   model: string;
 }
 

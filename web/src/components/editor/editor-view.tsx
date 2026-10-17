@@ -151,7 +151,7 @@ export function EditorView({ project }: { project: Project }) {
               <p className="mt-3 text-sm text-text-muted">ou ajoutez des plans avec + dans les ressources</p>
             </div>
           ) : (
-            <div className="relative aspect-video max-h-full w-full max-w-3xl overflow-hidden bg-primary">
+            <div className="relative max-h-full w-full max-w-3xl overflow-hidden bg-primary" style={{ aspectRatio: project.aspectRatio.replace(":", " / ") }}>
               {current?.data.mediaUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={current.data.posterUrl ?? current.data.mediaUrl} alt={current.name} className="absolute inset-0 size-full object-cover"
@@ -191,7 +191,16 @@ export function EditorView({ project }: { project: Project }) {
       <div role="toolbar" aria-label="Outils du montage" className="flex flex-wrap items-center gap-1 border-y border-border px-3 py-1">
         <IconButton label="Dézoomer" icon={<ZoomOut className="size-5" />} onClick={() => setPxPerSec((v) => Math.max(20, v / 1.5))} />
         <IconButton label="Zoomer" icon={<ZoomIn className="size-5" />} onClick={() => setPxPerSec((v) => Math.min(400, v * 1.5))} />
-        <span className="px-2 text-sm text-text-muted">{project.aspectRatio} · {tl.fps} i/s</span>
+        <label className="sr-only" htmlFor="tl-ratio">Format du film</label>
+        <select id="tl-ratio" value={project.aspectRatio} onChange={(e) => data.updateProject(project.id, { aspectRatio: e.target.value as Project["aspectRatio"] })}
+          className="h-8 border border-border bg-surface px-1 text-sm text-text-muted">
+          {["16:9", "9:16", "1:1", "21:9", "4:3", "3:4", "5:4"].map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <label className="sr-only" htmlFor="tl-fps">Images par seconde</label>
+        <select id="tl-fps" value={tl.fps} onChange={async (e) => { const fps = Number(e.target.value) as Timeline["fps"]; try { setTl(await data.saveTimeline({ ...tl, fps })); } catch { setTl(await data.timeline(project.id)); } }}
+          className="h-8 border border-border bg-surface px-1 text-sm text-text-muted">
+          {[24, 25, 30].map((f) => <option key={f} value={f}>{f} i/s</option>)}
+        </select>
         <div className="mx-auto flex items-center gap-2">
           <IconButton label={playing ? "Pause (Espace)" : "Lire (Espace)"} disabled={!total}
             icon={playing ? <Pause className="size-5" /> : <Play className="size-5" />}

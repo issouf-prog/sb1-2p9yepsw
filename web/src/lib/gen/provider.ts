@@ -11,6 +11,8 @@ export interface GenProvider {
   /** Image du même personnage dans une nouvelle scène (références : 1 à 5 images). */
   character(input: { prompt: string; model: string; references: { url: string; name: string; prompt?: string }[]; aspectRatio: AspectRatio }): Promise<ImageResult>;
   voice(input: { text: string; voice: string; model: string }): Promise<AudioResult>;
+  /** Retouche d'une image existante selon une instruction. */
+  edit(input: { instruction: string; model: string; source: { url: string; prompt?: string; name: string }; aspectRatio: AspectRatio }): Promise<ImageResult>;
   music(input: { prompt: string; model: string; durationMs: number }): Promise<AudioResult>;
 }
 
@@ -122,6 +124,10 @@ export const simulatedGen: GenProvider = {
     // Simulation de la cohérence : la palette vient du personnage, la composition de la scène.
     const ref = references[0];
     return placeholderImage(prompt, aspectRatio, `Aperçu simulé · ${ref?.name ?? "personnage"}`, ref?.prompt ?? ref?.name);
+  },
+  async edit({ instruction, source, aspectRatio }) {
+    await wait(900 + Math.random() * 600);
+    return placeholderImage(instruction, aspectRatio, `Retouche simulée · ${source.name}`, source.prompt ?? source.name);
   },
   async voice({ text, voice }) {
     await wait(700 + Math.random() * 500);

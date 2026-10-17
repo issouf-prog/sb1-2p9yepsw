@@ -66,3 +66,30 @@ personnage dans une scène → 128 ; voix manuelle ; ressources (8 éléments, v
 V_VP9 et A_OPUS. Scénarios précédents rejoués sans régression. 0 erreur console.
 
 Parité : 47,8 / 100, indispensables 28 sur 60.
+
+## 4e passe (2026-10-17)
+
+| ID | état | fait | manque |
+| --- | --- | --- | --- |
+| S05 Styles | fait | 12 styles du catalogue, recherche, style appliqué aux prompts et affiché sur les plans | — |
+| S06 Mon style | fait | 1 à 5 images de référence | — |
+| S07 Toile | partiel | barre épinglée format + style, import par menu et glisser-déposer, archiver, Échap pour désélectionner, placement sans chevauchement | les nœuds ajoutés en rafale peuvent encore se toucher |
+| S08 Panneau | fait | Auto, cadenas de plan, durée vidéo 5/10 s (coût ×2), image de fin, @ pour citer un plan, état « signalé » | résolution vidéo |
+| S09b Nœud | fait | Modifier l'image, archiver | convertir en 3D |
+| S10 Agent | partiel | modération, style du projet, @, pièces jointes, dictée | vrai LLM |
+| S13 Ressources | fait | filtre Archivés + restaurer | — |
+| S15 Montage | partiel | format et images/s modifiables | transitions, effets, sous-titres auto |
+| S21 Tarifs | partiel | choix de plan simulé (crédits du plan ajoutés) | Stripe |
+| Légal | partiel | CGU et confidentialité (modèles de travail, à faire relire) | relecture juridique |
+
+Bugs trouvés par les tests et corrigés : le menu d'un nœud sélectionné recouvrait le voisin (ajout d'Échap,
+menu rapproché) ; les nouveaux nœuds apparaissaient par-dessus les plans existants (recherche de place libre,
+section agrandie) ; une pièce jointe était perdue car la FileList était vidée avant la lecture asynchrone.
+
+Vérifié dans Chromium : style choisi sur l'accueil puis visible sur la toile et les plans ; demande violente
+refusée par l'agent et par un nœud sans débit ; modèle Pro verrouillé en Gratuit ; Auto par défaut ; @ propose
+les plans et les relie ; retouche d'image ; vidéo 10 s = 240 crédits ; import PNG + WAV ; pièce jointe citée ;
+archiver → restaurer ; images/s conservées ; pages légales. Référence de personnage verrouillée en Gratuit puis
+débloquée par le plan Créateur. Les 4 scénarios et le test mobile passent, 0 erreur console.
+
+Parité : 60,1 / 100, indispensables 38 sur 60.

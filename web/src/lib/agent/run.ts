@@ -10,6 +10,8 @@ import { storyFromIdea } from "../story";
 import { buildTimeline, appendAudio } from "./tools";
 import { mediaSize } from "../canvas";
 import { titleFrom } from "../data/fake";
+import { moderate, flaggedMessage } from "../moderation";
+import { applyStyle } from "../data/styles";
 
 interface TurnInput {
   projectId: string;
@@ -56,6 +58,16 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
 
   const lower = text.toLowerCase();
   const canvas = await data.canvas(projectId);
+
+  // Modération avant toute action : rien n'est lancé ni débité.
+  const mod = moderate(text);
+  if (!mod.ok) {
+    const m = await act("moderate", "Vérifier la demande");
+    await finish(m, "failed", flaggedMessage(mod.reason));
+    await say({ type: "text", text: "Je ne peux pas réaliser cette demande. Proposez-moi une autre version de la scène et je m'y mets." });
+    return;
+  }
+  const style = (await data.listStyles()).find((s) => s.id === project.styleId) ?? null;
 
   // Demande d'animation d'une image sélectionnée.
   const selectedImage = canvas.nodes.find((n) => selectedNodeIds.includes(n.id) && n.type === "image" && n.data.mediaUrl);
@@ -165,7 +177,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
     await data.upsertNode(node);
     const a = await act("generate_image", "Dessiner la fiche en trois vues");
     try {
-      const r = await gen.image({ prompt: node.data.prompt!, model: node.data.model!, aspectRatio: project.aspectRatio });
+      const r = await gen.image({ prompt: applyStyle(node.data.prompt!, style), model: node.data.model!, aspectRatio: project.aspectRatio });
       await data.upsertNode({ ...node, type: "image", data: { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
       await finish(a, "done");
       await say(
@@ -245,9 +257,9 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
       await data.upsertNode(node);
       const a = await act("generate_image", `Générer « ${node.name} »`);
       try {
-        const r = await gen.image({ prompt: shot, model: node.data.model!, aspectRatio: project.aspectRatio });
+        const r = await gen.image({ prompt: applyStyle(shot, style), model: node.data.model!, aspectRatio: project.aspectRatio });
         Object.assign(node, { type: "image" });
-        node.data = { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height };
+        node.data = { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height, styleName: style?.name };
         await data.upsertNode(node);
         images.push(node);
         await finish(a, "done");

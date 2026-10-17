@@ -39,6 +39,7 @@ function LoginForm() {
           <Button type="submit" className="w-full" disabled={busy}>Recevoir un lien de connexion</Button>
         </form>
         <p className="mt-6 text-xs text-text-muted">Mode développement : la connexion est simulée et vos données restent dans ce navigateur.</p>
+        <p className="mt-3 text-xs text-text-muted">En continuant, vous acceptez les <a href="/legal/cgu" className="underline">conditions d&apos;utilisation</a> et la <a href="/legal/confidentialite" className="underline">politique de confidentialité</a>.</p>
       </div>
     </main>
   );

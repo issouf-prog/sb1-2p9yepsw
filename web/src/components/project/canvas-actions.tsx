@@ -2,10 +2,17 @@
 
 import { createContext, useContext } from "react";
 import type { AspectRatio, CanvasNode } from "@/lib/data";
+import type { PlanId } from "@/lib/data/prices";
 
 export interface CanvasActions {
   ratio: AspectRatio;
-  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string }): Promise<void>;
+  plan: PlanId;
+  /** Plans visibles du projet (pour @ et l'image de fin). */
+  media: CanvasNode[];
+  upgrade(): void;
+  editFrom(node: CanvasNode): Promise<void>;
+  archive(node: CanvasNode): Promise<void>;
+  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string; seconds?: number; endFrameId?: string }): Promise<void>;
   characterFrom(node: CanvasNode): Promise<void>;
   rename(node: CanvasNode): Promise<void>;
   animate(node: CanvasNode): Promise<void>;

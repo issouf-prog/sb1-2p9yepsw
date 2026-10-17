@@ -3,14 +3,15 @@
 import { Handle, NodeToolbar, Position, type Node, type NodeProps } from "@xyflow/react";
 import {
   Heart, Pencil, Download, Maximize2, CopyPlus, Trash2, Copy, RefreshCw, Video, Film, Play, Loader2, AlertCircle, ChevronDown, ImageIcon, Check, X,
-  UserRound, Mic, Music,
+  UserRound, Mic, Music, Archive, Wand2, ShieldAlert,
 } from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { mediaSize } from "@/lib/canvas";
-import { MODELS, VOICES, type ModelKind } from "@/lib/data/prices";
+import { MODELS, VOICES, AUTO, VIDEO_SECONDS, PLAN_LABEL, lockedFor, priceOf, type ModelKind } from "@/lib/data/prices";
+import { MentionTextarea } from "@/components/ui/mention-textarea";
 import type { CanvasNode, Section } from "@/lib/data";
 import { useCanvasActions } from "./canvas-actions";
 
@@ -84,14 +85,16 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
             className="inline-flex size-8 items-center justify-center rounded-pill hover:bg-surface-sunken"><Download className="size-4" /></a>
           <IconButton label="Plein écran" className="size-8" icon={<Maximize2 className="size-4" />} onClick={() => actions.preview(n)} />
           <IconButton label="Dupliquer" className="size-8" icon={<CopyPlus className="size-4" />} onClick={() => actions.duplicate(n)} />
+          <IconButton label="Archiver (retirer de la toile)" className="size-8" icon={<Archive className="size-4" />} onClick={() => actions.archive(n)} />
         </div>
       </NodeToolbar>
 
-      <NodeToolbar isVisible={selected} position={Position.Right} align="start" offset={12}>
+      <NodeToolbar isVisible={selected} position={Position.Right} align="start" offset={8}>
         <div role="menu" aria-label={`Menu de ${n.name}`} className="w-60 border border-border bg-surface py-2 shadow-pop">
           <MenuRow icon={<RefreshCw />} label="Relancer" onClick={() => actions.regenerate(n)} disabled={!n.data.prompt || isVideo} />
           <div className="mx-4 my-2 h-px bg-border" />
           {!isVideo && <MenuRow icon={<Video />} label="Animer cette image" onClick={() => actions.animate(n)} />}
+          {!isVideo && <MenuRow icon={<Wand2 />} label="Modifier l'image" onClick={() => actions.editFrom(n)} />}
           {!isVideo && <MenuRow icon={<UserRound />} label="Personnage de référence" onClick={() => actions.characterFrom(n)} />}
           <MenuRow icon={<Film />} label="Envoyer au montage" onClick={() => actions.sendToEditor(n)} />
           <div className="mx-4 my-2 h-px bg-border" />
@@ -100,13 +103,15 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
       </NodeToolbar>
 
       <div className="relative overflow-hidden bg-surface-sunken" style={{ height: h }}>
-        {n.data.mediaUrl && (
+        {isVideo && n.data.uploaded ? (
+          <video src={n.data.mediaUrl} poster={n.data.posterUrl} controls muted className="nodrag size-full object-cover" aria-label={n.name} />
+        ) : n.data.mediaUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={isVideo ? n.data.posterUrl : n.data.mediaUrl} alt={n.data.prompt ?? n.name} draggable={false}
             className={cn("size-full object-cover", playing && "animate-[kenburns_5s_ease-in-out_forwards]")}
             onAnimationEnd={() => setPlaying(false)} />
         )}
-        {isVideo && (
+        {isVideo && !n.data.uploaded && (
           <button onClick={() => setPlaying(true)} aria-label={`Lire ${n.name}`}
             className="nodrag absolute inset-0 m-auto flex size-12 items-center justify-center rounded-pill bg-primary/60 text-on-primary hover:bg-primary/80">
             <Play className="size-5" />
@@ -114,7 +119,8 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
         )}
       </div>
       <p className="px-2 pt-1 text-right text-xs tabular-nums text-text-muted">
-        {n.data.width} × {n.data.height} px{isVideo && n.data.durationMs ? ` · ${(n.data.durationMs / 1000).toFixed(1)} s · aperçu simulé` : ""}
+        {n.data.width && n.data.height ? `${n.data.width} × ${n.data.height} px` : ""}{isVideo && n.data.durationMs ? ` · ${(n.data.durationMs / 1000).toFixed(1)} s${n.data.uploaded ? "" : " · aperçu simulé"}` : ""}
+        {n.data.uploaded && " · importé"}{n.data.styleName && ` · ${n.data.styleName}`}
         {status === "failed" && " · échec"}
       </p>
       {n.data.prompt && (
@@ -135,7 +141,7 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
 }
 
 const KIND_OF: Record<string, ModelKind> = {
-  generate_image: "image", generate_video: "video", character_ref: "character", generate_voice: "voice", generate_music: "music",
+  generate_image: "image", generate_video: "video", character_ref: "character", generate_voice: "voice", generate_music: "music", edit_image: "edit",
 };
 const KIND_UI: Record<ModelKind, { title: string; icon: React.ReactNode; field: string; placeholder: string }> = {
   image: { title: "Nouvelle image", icon: <ImageIcon aria-hidden className="size-6 text-text-muted" />, field: "Prompt du plan", placeholder: "Décrivez le plan : sujet, cadrage, lumière…" },
@@ -143,6 +149,7 @@ const KIND_UI: Record<ModelKind, { title: string; icon: React.ReactNode; field: 
   character: { title: "Personnage dans une scène", icon: <UserRound aria-hidden className="size-6 text-text-muted" />, field: "Prompt du plan", placeholder: "Où est le personnage, que fait-il, cadrage…" },
   voice: { title: "Nouvelle voix", icon: <Mic aria-hidden className="size-6 text-text-muted" />, field: "Réplique", placeholder: "Le texte à dire. [chuchoté] ou [rire] pour diriger." },
   music: { title: "Nouvelle musique", icon: <Music aria-hidden className="size-6 text-text-muted" />, field: "Prompt du plan", placeholder: "Ambiance, instruments, tempo…" },
+  edit: { title: "Modifier l'image", icon: <Wand2 aria-hidden className="size-6 text-text-muted" />, field: "Modification", placeholder: "Ce qu'il faut changer : la lumière, un objet, l'expression…" },
 };
 
 function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: boolean; w: number; h: number }) {
@@ -151,10 +158,14 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
   const ui = KIND_UI[kind];
   const models = MODELS[kind] as readonly { id: string; label: string; credits: number }[];
   const [prompt, setPrompt] = useState(node.data.prompt ?? "");
-  const [model, setModel] = useState(node.data.model ?? models[Math.min(1, models.length - 1)].id);
+  const [model, setModel] = useState(node.data.model ?? AUTO);
   const [voice, setVoice] = useState(node.data.voice ?? VOICES[0].id);
+  const [seconds, setSeconds] = useState<number>(node.data.seconds ?? 5);
+  const [endFrame, setEndFrame] = useState("");
   const status = node.data.status ?? "idle";
-  const cost = models.find((m) => m.id === model)?.credits ?? 0;
+  const cost = priceOf(kind, model, seconds);
+  const lock = lockedFor(kind, model, actions.plan);
+  const others = actions.media.filter((m) => m.id !== node.id);
   const running = status === "running";
   const isAudio = kind === "voice" || kind === "music";
   const boxH = isAudio ? 120 : h;
@@ -170,9 +181,9 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
             <Loader2 aria-hidden className="size-6 animate-spin text-text-muted" />
             <p className="text-sm">Génération en cours…</p>
           </>
-        ) : status === "failed" ? (
+        ) : status === "failed" || status === "flagged" ? (
           <>
-            <AlertCircle aria-hidden className="size-6 text-danger" />
+            {status === "flagged" ? <ShieldAlert aria-hidden className="size-6 text-danger" /> : <AlertCircle aria-hidden className="size-6 text-danger" />}
             <p className="text-sm text-danger">{node.data.error ?? "La génération n'a pas abouti."}</p>
           </>
         ) : (
@@ -185,16 +196,39 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
       </div>
       <NodeToolbar isVisible={selected && !running} position={Position.Bottom} align="start" offset={10}>
         <form
-          onSubmit={(e) => { e.preventDefault(); if (prompt.trim()) actions.runGenerator(node, { prompt: prompt.trim(), model, voice: kind === "voice" ? voice : undefined }); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (lock) return actions.upgrade();
+            if (prompt.trim()) actions.runGenerator(node, { prompt: prompt.trim(), model, voice: kind === "voice" ? voice : undefined, seconds: kind === "video" ? seconds : undefined, endFrameId: endFrame || undefined });
+          }}
           className="nodrag w-[22rem] space-y-3 border border-border bg-surface p-3 shadow-pop"
         >
-          {models.length > 1 && (
-            <label className="block">
-              <span className="text-xs text-text-muted">Modèle</span>
-              <select value={model} onChange={(e) => setModel(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
-                {models.map((m) => <option key={m.id} value={m.id}>{m.label} · {m.credits} crédits</option>)}
-              </select>
-            </label>
+          <label className="block">
+            <span className="text-xs text-text-muted">Modèle</span>
+            <select value={model} onChange={(e) => setModel(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+              <option value={AUTO}>Auto (choisi pour vous)</option>
+              {models.map((m) => {
+                const l = lockedFor(kind, m.id, actions.plan);
+                return <option key={m.id} value={m.id}>{l ? "🔒 " : ""}{m.label} · {m.credits} crédits{l ? ` · plan ${PLAN_LABEL[l]}` : ""}</option>;
+              })}
+            </select>
+          </label>
+          {kind === "video" && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="text-xs text-text-muted">Durée</span>
+                <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+                  {VIDEO_SECONDS.map((s) => <option key={s} value={s}>{s} secondes</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs text-text-muted">Image de fin (facultatif)</span>
+                <select value={endFrame} onChange={(e) => setEndFrame(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+                  <option value="">Aucune</option>
+                  {others.filter((m) => m.type === "image").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </label>
+            </div>
           )}
           {kind === "voice" && (
             <label className="block">
@@ -206,12 +240,14 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
           )}
           <label className="block">
             <span className="text-xs text-text-muted">{ui.field}</span>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} maxLength={2000} placeholder={ui.placeholder}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }}
+            <MentionTextarea value={prompt} onValueChange={setPrompt} nodes={others} rows={3} maxLength={2000}
+              placeholder={`${ui.placeholder} (@ pour citer un plan)`}
+              onEnter={() => (document.activeElement as HTMLTextAreaElement | null)?.form?.requestSubmit()}
               className="mt-1 block w-full resize-none border border-border-input bg-surface px-2 py-1.5 text-sm outline-none focus:border-text" />
           </label>
-          <div className="flex justify-end">
-            <Button type="submit" size="sm" cost={cost} disabled={!prompt.trim()}>Lancer</Button>
+          <div className="flex items-center justify-between gap-2">
+            {lock ? <span className="text-xs text-text-muted">Modèle réservé au plan {PLAN_LABEL[lock]}</span> : <span />}
+            <Button type="submit" size="sm" cost={cost} locked={!!lock} disabled={!lock && !prompt.trim()}>Lancer</Button>
           </div>
         </form>
       </NodeToolbar>
@@ -241,6 +277,7 @@ function AudioNode({ node, selected }: { node: CanvasNode; selected: boolean }) 
       <NodeToolbar isVisible={selected} position={Position.Right} align="start" offset={12}>
         <div role="menu" aria-label={`Menu de ${node.name}`} className="w-60 border border-border bg-surface py-2 shadow-pop">
           <MenuRow icon={<Pencil />} label="Renommer" onClick={() => actions.rename(node)} />
+          <MenuRow icon={<Archive />} label="Archiver" onClick={() => actions.archive(node)} />
           <MenuRow icon={<Film />} label="Envoyer au montage" onClick={() => actions.sendToEditor(node)} />
           <div className="mx-4 my-2 h-px bg-border" />
           <MenuRow icon={<Trash2 />} label="Supprimer" onClick={() => actions.remove([node.id])} />
@@ -253,7 +290,7 @@ function AudioNode({ node, selected }: { node: CanvasNode; selected: boolean }) 
       <Bars seed={node.id} />
       {node.data.mediaUrl && <audio controls src={node.data.mediaUrl} className="nodrag mt-1 h-8 w-full" aria-label={`Écouter ${node.name}`} />}
       <p className="mt-1 text-xs text-text-muted">
-        {((node.data.durationMs ?? 0) / 1000).toFixed(1)} s{voice ? ` · ${voice.label}` : ""} · aperçu simulé
+        {((node.data.durationMs ?? 0) / 1000).toFixed(1)} s{voice ? ` · ${voice.label}` : ""}{node.data.uploaded ? " · importé" : " · aperçu simulé"}
       </p>
       {node.data.prompt && <p className="mt-1 line-clamp-3 text-sm"><mark className="bg-highlight text-text">{node.data.prompt}</mark></p>}
     </div>

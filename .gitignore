@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 __pycache__/
+
+# captures de l original : reference locale uniquement, jamais commitees ni livrees
+replica/screens/*
+!replica/screens/.gitkeep

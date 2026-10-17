@@ -40,7 +40,7 @@ Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,no,S16
 Filigrane selon le plan,monteur,must,yes,no,Free et Casual
 Projet privé ou partagé,partage,must,yes,no,
 Pages légales (CGU confidentialité),légal,must,yes,no,à toi pas copiées
-Galerie de films récents dans l'accueil,projets,must,yes,no,à confirmer avec tes captures
+Section Créé avec Flick sur l'accueil (grille de films),projets,should,yes,no,S03 vu ; avec tes propres films
 Create My Style (1 à 5 images de référence),styles,should,yes,no,S06
 Change Style (transfert de style),images,should,yes,no,
 Remove background,images,should,yes,no,
@@ -66,8 +66,8 @@ Exports récents et Download again,monteur,should,yes,no,
 Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
 Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
 Export du script PDF et Word,script,should,yes,no,
-Agent IA dans le chat (génère organise monte),agent,should,yes,no,S10
-Agent : pièces jointes et voix,agent,should,yes,no,
+Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,no,S10 F00 cœur du produit
+Agent : pièces jointes et dictée vocale,agent,must,yes,no,trombone et micro
 Agent : Chat rules et Personalize,agent,should,yes,no,
 Script to Film,script,should,yes,no,F06
 Partage par email (can view / can edit),partage,should,yes,no,S18
@@ -88,6 +88,22 @@ Retraits en argent (cash-out),galerie,could,yes,no,S27 obligations légales de p
 Parrainage et Earn Credits,croissance,could,yes,no,
 Crédits gratuits hebdomadaires,crédits,could,yes,no,100 par semaine chez Flick
 Pages outils SEO,croissance,could,yes,no,S28 avec tes propres textes
+Agent : plusieurs conversations par projet,agent,must,yes,no,liste déroulante + nouvelle conversation
+Agent : cartes d'action avec statut (en cours réussie échouée),agent,must,yes,no,AgentAction
+Agent : puces d'asset inline cliquables,agent,must,yes,no,renvoie au nœud
+Agent : @ pour référencer une ressource,agent,must,yes,no,
+Agent : vérifier le coût total avant un lot,agent,must,no,no,amélioration : Flick lance 1 sur 2 puis échoue
+Agent : messages d'erreur humains avec bouton d'action,agent,must,no,no,amélioration : Flick affiche l'erreur technique brute
+Agent : puces de suggestion,agent,should,yes,no,ex. Revoir le raccord d'abord
+Agent : sélecteur de modèle Auto,agent,should,yes,no,
+Accueil : puces de démarrage (script prompt personnages style toile vierge),projets,must,yes,no,S03
+Projets récents avec lien Tous les projets,projets,must,yes,no,S03
+Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,no,S04b
+Fenêtre de recharge et upgrade,facturation,must,yes,no,S31
+Notifications,comptes,should,yes,no,S30
+Générer de la musique depuis le menu +,audio,should,yes,no,S09
+Visite guidée,onboarding,could,yes,no,puce de l'accueil
+Bandeau d'annonce fermable,croissance,could,yes,no,
 Bibliothèque Flickpedia de plans de films,références,skip,yes,skip,contenu sous droits ; possible avec ta propre bibliothèque
 Les 900+ styles de Flick,styles,skip,yes,skip,reconstruire le système avec tes presets
 Modèle maison Flick,modèles,skip,yes,skip,propriété de FlickArt

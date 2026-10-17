@@ -39,12 +39,15 @@ on n'en prend rien.
 | 20 | outil storyboard | https://flick.art/tools/ai-storyboard-generator | page SEO d'outil, FAQ, liste des autres outils |
 | 21 | CGU | https://flick.art/terms | propriété des sorties à l'utilisateur (5.2b) |
 | 22 | fiche YC | https://www.ycombinator.com/companies/flick | positionnement |
-| 23 | ton propre compte | https://flick.art/projects?tab=home | **à faire** : captures de tes écrans (voir « Trous ») |
+| 23 | ton propre compte (captures) | https://flick.art/projects?tab=home | 5 captures du 2026-10-17 dans `replica/screens/` (locales, hors git) : accueil, galerie, toile + agent, menu + |
 
 ## Boucle principale
 
-Écrire une idée → générer des plans (images) cohérents avec ses personnages →
-les animer en clips vidéo → les monter en film, le tout sur un seul canvas.
+**Dire à l'agent ce qu'on veut**, et il fait tout : il écrit, découpe en plans,
+génère les images avec des personnages cohérents, les anime en vidéo, range la
+toile et monte le film. L'utilisateur dirige ; le canvas est l'endroit où il
+voit et retouche le travail de l'agent. Tout part d'une seule boîte de prompt
+(accueil) ou du chat (dans le projet).
 
 ## Écrans
 
@@ -52,27 +55,31 @@ les animer en clips vidéo → les monter en film, le tout sur un seul canvas.
 | --- | --- | --- | --- | --- | --- |
 | S01 | Accueil marketing | `/` | convertir | hero, galerie de films, tarifs, CTA Get Started | rempli |
 | S02 | Connexion / inscription | `/auth` | compte | email, Google (supposé), 300 crédits offerts | vide, erreur |
-| S03 | Projets — Home | `/projects?tab=home` | démarrer un projet | boîte de prompt, sélecteur de style, ratio, bouton Blank canvas, entrée Script to Film, liste des projets récents (supposée) | vide (nouveau compte), rempli |
-| S04 | Projets — autres onglets | `/projects?tab=…` | parcourir ses projets | cartes projet + menu (privé/partagé, renommer, supprimer), switcher de workspace | vide, rempli — **onglets exacts à confirmer** |
+| S03 | Accueil (onglet ACCUEIL) | `/projects?tab=home` | démarrer un projet en parlant à l'agent | bandeau d'annonce en haut (festival, bouton EN SAVOIR PLUS) ; titre « Quelle histoire veux-tu créer aujourd'hui ? » + sous-titre « Demandez à l'agent… » ; grande boîte de prompt avec placeholder d'exemple, trombone, icône note, PAS DE STYLE, ratio 16:9, bouton micro rond (voix/envoi) ; 6 puces de démarrage : Du script au film, Du prompt au film, Créer des personnages, Partir d'un style, Toile vierge, Visite guidée ; « Projets récents » (cartes : vignette, titre tronqué, « Modifié <date> ») + lien Tous les projets → ; « Créé avec Flick » (grille 3 colonnes de films) + lien Flick TV → | vide, rempli — **vu** |
+| S04 | Espace de travail (onglet ESPACE DE TRAVAIL) | barre du haut | tous ses projets | cartes projet + menu (privé/partagé, renommer, supprimer), switcher de workspace | contenu exact à confirmer (capture manquante) |
+| S04b | Barre globale | toutes les pages connectées | navigation | logo ; onglets ACCUEIL (point rouge = actif), ESPACE DE TRAVAIL, FLICK TV, FLICKPÉDIA ; cloche de notifications ; bouton noir + CRÉER ; badge crédits (point rouge + solde, ex. 125) ; avatar rond | — **vu** |
 | S05 | Explore Styles (modale) | S03 ou barre du canvas → « No style » | choisir un style | grille de 900+ styles, recherche, Create My Style | rempli |
 | S06 | Create My Style (modale) | S05 | style perso | upload de 1 à 5 images de référence | vide, upload, erreur |
-| S07 | Canvas | onglet Canvas d'un projet | cœur du produit | canvas infini, nœuds, connexions, barre d'outils gauche, ratio + style épinglés en haut, Share, Flickpedia, chat à droite/en bas, zoom | vide, rempli, génération en cours, hors écran |
+| S07 | Toile (canvas) | onglet TOILE d'un projet | voir et retoucher le travail de l'agent | barre projet : logo, nom du projet tronqué, Flickpedia, onglets HISTOIRE / TOILE / PLATEAU 3D / ÉDITEUR VIDÉO, cloche, Partager, crédits, avatar ; barre d'outils verticale flottante à gauche : poignée, + (noir), sélection, section, texte T, grille, assets, script, monteur, réglages, zoom en % (43 %) ; sections à fond bleu clair avec en-tête repliable (chevron + nom) ; nœuds titrés en ligne reliés par des traits fins ; nœud vidéo avec bouton lecture ; placeholder pointillé « Image vers vidéo · Prêt à générer vidéo » | vide, rempli, génération en cours, placeholder — **vu** |
 | S08 | Panneau d'un nœud (sous le nœud) | sélectionner un nœud | régler une génération | dropdown modèle (cadenas si hors plan), prompt avec @, 1x lot, engrenage, Run + coût | par défaut, verrouillé (« Upgrade »), en cours, signalé (flagged), échec |
-| S09 | Menu contextuel d'un nœud | clic droit / menus Image, Video, Audio | enchaîner une action | Edit Image, Change Style, Remove background, Character Reference, Generate Video, Generate Voice, Extract Frame | — |
-| S10 | Chat de l'agent | panneau du canvas, du script, de la 3D | piloter par la langue | vignettes des nœuds sélectionnés, trombone, voix, @asset, Chat rules, Personalize, rapport d'actions | vide, réponse, actions proposées, erreur |
-| S11 | Script | onglet Script | écrire le scénario | rail des scènes (actes), page de scénario avec puces de type de ligne, police, Upload, Download | exemple pré-rempli, vide (« Nothing to download yet »), import incertain |
+| S09 | Menu + de la toile | bouton + de la barre gauche | ajouter un nœud | Téléverser, Note textuelle, Générer une image, Générer une vidéo › (sous-menu), Générer une voix, Générer de la musique | — **vu** |
+| S09b | Menu contextuel d'un nœud | clic droit / menus Image, Video, Audio | enchaîner une action | Edit Image, Change Style, Remove background, Character Reference, Generate Video, Generate Voice, Extract Frame | — |
+| S10 | Agent (panneau de droite, pleine hauteur) | toujours ouvert dans un projet, repliable (») | **le cœur du produit : l'agent fait tout** | en-tête : replier », icône de l'agent, titre de la conversation + liste déroulante (plusieurs conversations par projet), vignette du nœud sélectionné, nouvelle note, + nouvelle conversation ; puces de suggestion (ex. « Revoir le raccord d'abord ») ; message utilisateur en bloc encadré aligné à droite ; **carte d'action** (nom de l'action + statut, ex. « Lancer la génération · Échoué » en rouge avec le détail) ; réponse de l'agent en texte riche avec **puces d'asset inline** (vignette + nom, cliquables vers le nœud) et **boutons inline** (ex. « recharger les crédits ») ; lien Besoin d'aide ; saisie « Brainstorme ou crée n'importe quoi avec le chat · @ pour référencer une ressource », trombone, @, sélecteur de modèle « Auto ^ », bouton micro rond | vide, en réflexion, actions en cours, action échouée, crédits épuisés (ouvre la fenêtre de recharge) — **vu** |
+| S11 | Histoire (script) | onglet HISTOIRE | écrire le scénario | rail des scènes (actes), page de scénario avec puces de type de ligne, police, Upload, Download | exemple pré-rempli, vide (« Nothing to download yet »), import incertain |
 | S12 | Import de script (modale) | S11 → Upload | importer .fountain/.txt/.fdx/.pdf/.docx | Import as-is / Let AI read it / Open chat | analyse, lignes incertaines, PDF scanné |
 | S13 | Assets | barre d'outils → Assets | médiathèque du projet | dossiers, Ungrouped, Add to folder, uploads | vide, rempli |
 | S14 | Sélecteur de voix (modale) | nœud Generate Voice → Select voice | choisir une voix | onglet Explore, recherche, filtres langue/âge/genre/usage, aperçu au survol, Use | rempli |
 | S15 | Monteur vidéo | onglet Video Editor (ou panneau flottant Player + timeline) | monter le film | panneau Assets (ASSETS/SFX/EFFECTS/TRANSITIONS), aperçu, Properties (PROPERTIES/COLOR/EFFECTS), timeline Main/Music/Text, barre d'outils | vide, rempli, captions en cours (timeline verrouillée) |
 | S16 | Export (modale) | S15 → Export | sortir le film | 720p/1080p/4K, filigrane (forcé en Free/Casual), Rendering, Download again, Recent exports, Publier sur la galerie | rendu, terminé, échec |
-| S17 | 3D Stage | onglet 3D Stage | mise en scène 3D | onglets de scènes, bibliothèque de composants (Human, Camera, Target, primitives, animaux), Properties, gizmo W/E/R, timeline par piste, Rehearse, Record, moniteurs caméra, chat | scène vide, remplie, enregistrement |
+| S17 | Plateau 3D | onglet PLATEAU 3D | mise en scène 3D | onglets de scènes, bibliothèque de composants (Human, Camera, Target, primitives, animaux), Properties, gizmo W/E/R, timeline par piste, Rehearse, Record, moniteurs caméra, chat | scène vide, remplie, enregistrement |
 | S18 | Partage (modale) | Share en haut à droite | collaborer | invitation email (can edit / can view), lien (no access / view / edit), Copy link | privé, partagé |
 | S19 | Flickpedia (panneau) | bouton à côté du nom du projet | références de plans | recherche, grille de plans, Add to Canvas | rempli |
 | S20 | People / workspace | switcher en haut à gauche → People | gérer l'équipe | inviter, relancer/révoquer, retirer, conso par membre | solo, équipe |
 | S21 | Tarifs | `/pricing` | vendre | 5 plans, mensuel/annuel −20 %, recharge de crédits | — |
 | S22 | Facturation / crédits | compte | payer | solde, plan, factures, annulation, Earn Credits (parrainage, Discord) | — |
-| S23 | Galerie publique (Flick TV) | `/tv` | regarder, inspirer | cartes de films, compteur de pourboires | rempli |
+| S23 | Galerie publique (Flick TV) | `/tv`, et section « Créé avec Flick » de l'accueil | regarder, inspirer | carte film : vignette 16:9 avec durée en badge (bas droite) et titre en surimpression, puis titre, avatar + nom du créateur, compteurs (copies du workflow, j'aime, pourboires en k) | rempli — **vu** |
+| S30 | Notifications | cloche de la barre du haut | suivre générations, invitations, pourboires | liste (supposée) | à confirmer |
+| S31 | Fenêtre de recharge / upgrade | crédits épuisés, Run verrouillé, bouton inline de l'agent | vendre | plans, packs de crédits (supposé) | à confirmer |
 | S24 | Page d'un film | `/tv/…` | regarder | lecteur, Like, Share, Tip, Workflow (ouvre le canvas du film), commentaires | — |
 | S25 | Profil créateur | depuis S24 | vitrine | films, pourboires | — |
 | S26 | Pourboire (modale) | S24 → Tip | soutenir | 50/200/1000 ou montant libre ≥ 5, anonyme, note 200 car. | — |
@@ -87,6 +94,15 @@ F01 Nouveau projet depuis un prompt
     S03 (prompt + style + ratio) -> S07 canvas avec l'agent qui commence
     clics du chemin nominal : 2 (taper, Entrée)
     cas limites : prompt vide, crédits à 0, prompt signalé
+
+F00 Tout faire en parlant à l'agent (le flux principal)
+    S03 prompt (ou puce « Du prompt au film ») -> projet créé -> S10 l'agent planifie,
+    crée une section, génère les images, puis les vidéos (cartes d'action) -> S07 se remplit
+    -> l'agent monte le film dans S15 -> S16 export
+    clics : 2 pour démarrer, puis des validations dans le chat
+    cas limites : crédits épuisés en plein lot (vu : 1 génération sur 2 lancée, l'agent
+    s'arrête et propose la recharge), action échouée, l'agent modifie ce qu'on n'a pas
+    demandé, référence ambiguë (« la seconde ») -> l'agent renvoie des puces d'asset
 
 F02 Canvas vide -> première image
     S03 Blank canvas -> S07 -> + Generate Image -> S08 (modèle, prompt) -> Run
@@ -164,6 +180,14 @@ F14 Donner un pourboire et retirer
 | Piste de timeline | Main (aimant), Music, Text, 3D | clip sélectionné, rognage, aimantation | S15, S17 |
 | Panneau de propriétés | clip, objet 3D | — | S15, S17 |
 | Puce de type de ligne | Scene, Action, Character, Dialogue, Shot, Parenthetical, Transition, Act | — | S11 |
+| Carte d'action de l'agent | en cours, réussie, échouée (rouge) | repliée, dépliée avec détail | S10 |
+| Puce d'asset inline | image (vignette), vidéo (▷), section | survol, clic = sélectionne le nœud | S10 |
+| Puce de suggestion / démarrage | pilule à bord fin | défaut, survol | S03, S10 |
+| Sélecteur de conversation | liste déroulante | — | S10 |
+| Carte projet | vignette + titre + date de modif | survol, menu | S03, S04 |
+| Carte film | vignette + durée + créateur + compteurs | survol (lecture) | S03, S23 |
+| Bandeau d'annonce | image de fond + texte + bouton | fermable (supposé) | barre du haut |
+| Bouton micro rond | noir | repos, enregistrement | S03, S10 |
 | Toast / avis | info, avertissement orange (ratio), erreur, signalé | — | partout |
 | Badge de crédits | solde, coût | bas, zéro | barre du haut, S08 |
 | Switcher de workspace | perso, équipe | — | barre du haut |
@@ -208,7 +232,14 @@ Timeline      id, project_id, aspect_ratio, tracks (json : Main | Music | Text, 
 Export        id, project_id, resolution (720p | 1080p | 4k), watermark, status, url, created_at
 Stage3D       id, project_id, scenes (json : objets, caméras, pistes d'animation)
               confiance : supposée
-ChatMessage   id, project_id, user_id, role, content, attachments, actions (json)
+Conversation  id, project_id, user_id, title, created_at
+              preuve : liste déroulante + bouton « + » dans S10 ; confiance : élevée
+ChatMessage   id, conversation_id, user_id, role, content (texte riche avec
+              références d'assets), attachments, model (auto | …)
+AgentAction   id, message_id, tool (generate_image | generate_video | create_section |
+              edit_timeline | …), input (json), status (running | done | failed),
+              error, generation_ids
+              preuve : carte « Lancer la génération · Échoué » ; confiance : élevée
 ChatRules     user_id, rules, personalization
 CreditLedger  id, workspace_id, user_id, delta, reason (plan | topup | generation |
               refund | tip_in | tip_out | referral | weekly_free), generation_id, created_at
@@ -224,13 +255,13 @@ Referral      referrer_id, referred_id, rewarded
 ```
 
 Relations : User n-n Workspace (Membership) ; Workspace 1-n Project ; Project
-1-n Node, Edge, Section, Asset, Generation, ChatMessage ; Project 1-1 Script,
+1-n Node, Edge, Section, Asset, Generation, ChatMessage ; Project 1-n Conversation 1-n ChatMessage 1-n AgentAction ; Project 1-1 Script,
 Timeline, Stage3D ; Workspace 1-n CreditLedger ; Project 1-n Film ; Film 1-n
 Tip, Comment.
 
 ## Matrice des fonctions
 
-Voir `features.csv`. Must : 42, should : 34, could : 13, skip : 6.
+Voir `features.csv`. Must : 53, should : 37, could : 15, skip : 6.
 
 ## Hors périmètre (impossible ou interdit à cloner)
 
@@ -247,30 +278,43 @@ Voir `features.csv`. Must : 42, should : 34, could : 13, skip : 6.
 
 ## Taille
 
-Écrans 29, flux 14, entités 25. Parties difficiles :
-1. **Canvas à nœuds performant** avec collaboration temps réel (CRDT type Yjs).
-2. **Orchestration des générations** : files de jobs asynchrones sur ~10
+Écrans 34, flux 15, entités 27. Parties difficiles :
+1. **L'agent qui fait tout** : un LLM avec appels d'outils sur le canvas, le
+   script, les générations et la timeline ; planification multi-étapes,
+   cartes d'action, reprise propre quand une étape échoue ou que les crédits
+   manquent. C'est le cœur du produit, pas un bonus.
+2. **Canvas à nœuds performant** avec collaboration temps réel (CRDT type Yjs).
+3. **Orchestration des générations** : files de jobs asynchrones sur ~10
    fournisseurs, webhooks, reprise sur échec, modération, coût en crédits
    calculé avant le Run et débité de façon atomique.
-3. **Monteur vidéo dans le navigateur + rendu serveur** (FFmpeg ou Remotion),
+4. **Monteur vidéo dans le navigateur + rendu serveur** (FFmpeg ou Remotion),
    captions, export 4K.
-4. Agent IA qui lit et modifie le canvas, le script et la timeline par appels d'outils.
 5. 3D Stage (Three.js) avec enregistrement de caméra.
 6. Économie de crédits : abonnements, recharges, pool d'équipe, pourboires,
    retraits en argent réel (obligations légales de paiement aux créateurs).
 
 Taille : **XL** — à redécouper. Plan proposé en phases livrables :
-- **Phase 1 (M)** : comptes, page Projets, canvas, nœuds texte/image/vidéo,
-  styles, référence de personnage, crédits + Stripe. Déjà vendable.
+- **Phase 1 (M)** : comptes, accueil avec la boîte de prompt, **agent avec
+  appels d'outils**, canvas, nœuds texte/image/vidéo, styles, référence de
+  personnage, crédits + Stripe. Déjà vendable.
 - **Phase 2 (M)** : monteur + export, voix et dialogue, assets.
-- **Phase 3 (M)** : script + import, agent IA, partage et équipes.
+- **Phase 3 (M)** : script + import, agent sur le script et la timeline, partage et équipes.
 - **Phase 4 (L)** : collaboration temps réel, 3D Stage, galerie publique,
   pourboires et retraits.
 
 ## Trous à combler (avec ton propre compte)
 
-La page `/projects?tab=home` est derrière connexion et n'est décrite nulle part
-dans la doc. Pour la reproduire fidèlement (mise en page, onglets, cartes),
-envoie des captures de **ton** compte : Home, les autres onglets, une carte de
-projet avec son menu, le canvas vide, un nœud sélectionné et le monteur. Elles
-iront dans `replica/screens/` comme référence (jamais livrées dans le clone).
+Accueil, galerie, toile, agent et menu + : **vus** (captures dans
+`replica/screens/`, locales et hors git, jamais livrées). Il manque encore :
+ESPACE DE TRAVAIL, une carte projet avec son menu ouvert, un nœud image
+sélectionné avec son panneau, l'onglet HISTOIRE, l'ÉDITEUR VIDÉO, la fenêtre
+de recharge, les notifications.
+
+## À faire mieux que l'original (vu sur les captures)
+
+- L'erreur d'action affiche le message technique brut destiné au modèle
+  (« triggered 1 placeholder action(s)… Don't retry generation — tell the
+  user… »). Le clone montre un message humain et un bouton d'action.
+- Crédits épuisés en plein lot : une génération part, l'autre non. Le clone
+  vérifie le coût total du lot avant de lancer quoi que ce soit.
+- Les titres de nœuds se chevauchent dans une section serrée. Le clone les tronque proprement.

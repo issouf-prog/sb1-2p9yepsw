@@ -102,8 +102,20 @@ Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,no,
 Fenêtre de recharge et upgrade,facturation,must,yes,no,S31
 Notifications,comptes,should,yes,no,S30
 Générer de la musique depuis le menu +,audio,should,yes,no,S09
-Visite guidée,onboarding,could,yes,no,puce de l'accueil
 Bandeau d'annonce fermable,croissance,could,yes,no,
+Histoire : éditeur à blocs avec modèle Brief Narration Direction créative Scénario,script,must,yes,no,S11 vu ; l'agent lit et remplit ce document
+Histoire : bloc scénario au format INT. EXT. dialogue,script,should,yes,no,S11
+Éditeur : bouton Laisser l'agent construire ma timeline,agent,must,yes,no,S15 vu
+Éditeur : ressources groupées par section de la toile,monteur,should,yes,no,S15
+Éditeur : filtres Tout Favoris Archivé Enregistré,monteur,should,yes,no,S15
+Éditeur : ratio et fps de la timeline,monteur,must,yes,no,9:16 30 fps vu
+Éditeur : volume par piste,monteur,should,yes,no,piste Principal
+Plateau 3D : scène par défaut 1 caméra + 1 humain,3d,could,yes,no,S17
+Plateau 3D : blocs d'action sur la timeline (Orbite),3d,could,yes,no,S17
+Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
+Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
+Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,no,cartes d'action vues
+Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,no,amélioration : Flick répond en anglais à un utilisateur français
 Bibliothèque Flickpedia de plans de films,références,skip,yes,skip,contenu sous droits ; possible avec ta propre bibliothèque
 Les 900+ styles de Flick,styles,skip,yes,skip,reconstruire le système avec tes presets
 Modèle maison Flick,modèles,skip,yes,skip,propriété de FlickArt

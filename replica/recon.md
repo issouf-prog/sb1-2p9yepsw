@@ -39,7 +39,7 @@ on n'en prend rien.
 | 20 | outil storyboard | https://flick.art/tools/ai-storyboard-generator | page SEO d'outil, FAQ, liste des autres outils |
 | 21 | CGU | https://flick.art/terms | propriété des sorties à l'utilisateur (5.2b) |
 | 22 | fiche YC | https://www.ycombinator.com/companies/flick | positionnement |
-| 23 | ton propre compte (captures) | https://flick.art/projects?tab=home | 5 captures du 2026-10-17 dans `replica/screens/` (locales, hors git) : accueil, galerie, toile + agent, menu + |
+| 23 | ton propre compte (captures) | https://flick.art/projects?tab=home | 8 captures du 2026-10-17 dans `replica/screens/` (locales, hors git) : accueil, galerie, toile + agent, menu +, éditeur vidéo, plateau 3D, histoire |
 
 ## Boucle principale
 
@@ -65,19 +65,20 @@ voit et retouche le travail de l'agent. Tout part d'une seule boîte de prompt
 | S09 | Menu + de la toile | bouton + de la barre gauche | ajouter un nœud | Téléverser, Note textuelle, Générer une image, Générer une vidéo › (sous-menu), Générer une voix, Générer de la musique | — **vu** |
 | S09b | Menu contextuel d'un nœud | clic droit / menus Image, Video, Audio | enchaîner une action | Edit Image, Change Style, Remove background, Character Reference, Generate Video, Generate Voice, Extract Frame | — |
 | S10 | Agent (panneau de droite, pleine hauteur) | toujours ouvert dans un projet, repliable (») | **le cœur du produit : l'agent fait tout** | en-tête : replier », icône de l'agent, titre de la conversation + liste déroulante (plusieurs conversations par projet), vignette du nœud sélectionné, nouvelle note, + nouvelle conversation ; puces de suggestion (ex. « Revoir le raccord d'abord ») ; message utilisateur en bloc encadré aligné à droite ; **carte d'action** (nom de l'action + statut, ex. « Lancer la génération · Échoué » en rouge avec le détail) ; réponse de l'agent en texte riche avec **puces d'asset inline** (vignette + nom, cliquables vers le nœud) et **boutons inline** (ex. « recharger les crédits ») ; lien Besoin d'aide ; saisie « Brainstorme ou crée n'importe quoi avec le chat · @ pour référencer une ressource », trombone, @, sélecteur de modèle « Auto ^ », bouton micro rond | vide, en réflexion, actions en cours, action échouée, crédits épuisés (ouvre la fenêtre de recharge) — **vu** |
-| S11 | Histoire (script) | onglet HISTOIRE | écrire le scénario | rail des scènes (actes), page de scénario avec puces de type de ligne, police, Upload, Download | exemple pré-rempli, vide (« Nothing to download yet »), import incertain |
+| S11 | Histoire | onglet HISTOIRE | le document de projet que l'agent lit et remplit | **éditeur à blocs** (poignées + et T au survol d'un bloc), pleine largeur ; modèle pré-rempli : note en italique « Ceci est un modèle… demandez à l'agent de l'écrire », puis 4 sections titrées avec une ligne d'aide : **Brief** (ce qu'est le film, pour qui), **Narration** (ce qui se passe, dans l'ordre), **Direction créative** (esthétique, ton, références), **Scénario** (bloc au format scénario sur fond gris : INT./EXT., action, dialogue) ; mini-plan des sections à gauche (traits) ; réglages en haut à droite (curseurs) ; bouton « Passer cette étape » en bas à gauche (visite guidée) | modèle, rempli par l'agent — **vu** ; l'éditeur de scénario décrit par la doc (rail des scènes, puces de type) vit dans le bloc Scénario |
 | S12 | Import de script (modale) | S11 → Upload | importer .fountain/.txt/.fdx/.pdf/.docx | Import as-is / Let AI read it / Open chat | analyse, lignes incertaines, PDF scanné |
 | S13 | Assets | barre d'outils → Assets | médiathèque du projet | dossiers, Ungrouped, Add to folder, uploads | vide, rempli |
 | S14 | Sélecteur de voix (modale) | nœud Generate Voice → Select voice | choisir une voix | onglet Explore, recherche, filtres langue/âge/genre/usage, aperçu au survol, Use | rempli |
-| S15 | Monteur vidéo | onglet Video Editor (ou panneau flottant Player + timeline) | monter le film | panneau Assets (ASSETS/SFX/EFFECTS/TRANSITIONS), aperçu, Properties (PROPERTIES/COLOR/EFFECTS), timeline Main/Music/Text, barre d'outils | vide, rempli, captions en cours (timeline verrouillée) |
+| S15 | Éditeur vidéo | onglet ÉDITEUR VIDÉO | monter le film (ou le laisser monter par l'agent) | **3 colonnes + timeline**. Gauche : onglets RESSOURCES / SFX / EFFETS / TRANSITIONS ; 3 boutons d'affichage des panneaux ; filtres Tout / Favoris / Archivé │ Enregistré avec compteurs ; outils filtrer, trier, chercher, +, vue liste / grille ; ressources **groupées par section de la toile** (nom, crayon, compteur) puis « Non groupés » ; ligne : vignette, titre, + pour ajouter, durée (15s). Centre : aperçu ; état vide « Transformez vos plans en vidéo » + bouton noir **« Laisser l'agent construire ma timeline »** + « ou glissez un plan depuis le panneau Ressources ». Droite : propriétés (« Sélectionnez un clip pour afficher ses propriétés »). Barre de timeline : aide ?, zoom −/+, ratio (9:16), 30 fps, lecture + timecode 00:00:00 / 00:00:00, plein écran, sélection, ciseaux, rogner gauche / couper / rogner droite (grisés sans clip), aimant, magnétisme, sous-titres CC, texte T, **Exporter**. Règle avec tête de lecture en pastille rouge ; piste « Principal » avec haut-parleur et curseur de volume ; barre de défilement horizontale | vide — **vu** ; rempli, sous-titres en cours |
 | S16 | Export (modale) | S15 → Export | sortir le film | 720p/1080p/4K, filigrane (forcé en Free/Casual), Rendering, Download again, Recent exports, Publier sur la galerie | rendu, terminé, échec |
-| S17 | Plateau 3D | onglet PLATEAU 3D | mise en scène 3D | onglets de scènes, bibliothèque de composants (Human, Camera, Target, primitives, animaux), Properties, gizmo W/E/R, timeline par piste, Rehearse, Record, moniteurs caméra, chat | scène vide, remplie, enregistrement |
+| S17 | Plateau 3D | onglet PLATEAU 3D | mise en scène 3D | barre : + et onglet « Scène 1 », **Répéter** (lecture), **Enregistrer** (point rouge), bascule Scène / Caméras, bascule 3D / 2D ; viewport sombre avec grille, axes colorés, sphère d'orientation en haut à droite, mannequin humanoïde étiqueté « Humain 1 », pyramide de caméra en filaire ; mini-barre gauche : +, lasso, image, aide ; panneau droit : onglets Ajouter un composant / Mes composants, recherche, liste (Caméra 1, Humain 1) ; timeline en bas : aimant, bouton **Tutoriel** (pastille rouge), règle en secondes, une piste par objet (Caméra 1) avec des **blocs d'action** (ex. « Orbite ») et « Ajouter une action + », + pour ajouter une piste, « Passer cette étape » | scène par défaut (1 caméra + 1 humain) — **vu** ; enregistrement |
 | S18 | Partage (modale) | Share en haut à droite | collaborer | invitation email (can edit / can view), lien (no access / view / edit), Copy link | privé, partagé |
 | S19 | Flickpedia (panneau) | bouton à côté du nom du projet | références de plans | recherche, grille de plans, Add to Canvas | rempli |
 | S20 | People / workspace | switcher en haut à gauche → People | gérer l'équipe | inviter, relancer/révoquer, retirer, conso par membre | solo, équipe |
 | S21 | Tarifs | `/pricing` | vendre | 5 plans, mensuel/annuel −20 %, recharge de crédits | — |
 | S22 | Facturation / crédits | compte | payer | solde, plan, factures, annulation, Earn Credits (parrainage, Discord) | — |
 | S23 | Galerie publique (Flick TV) | `/tv`, et section « Créé avec Flick » de l'accueil | regarder, inspirer | carte film : vignette 16:9 avec durée en badge (bas droite) et titre en surimpression, puis titre, avatar + nom du créateur, compteurs (copies du workflow, j'aime, pourboires en k) | rempli — **vu** |
+| S32 | Visite guidée | puce « Visite guidée » de l'accueil, puis bouton « Passer cette étape » sur Histoire, Toile, Plateau 3D, Éditeur | apprendre le produit pas à pas | étapes par onglet, bouton Passer cette étape, Tutoriel | — **vu** (présence du bouton) |
 | S30 | Notifications | cloche de la barre du haut | suivre générations, invitations, pourboires | liste (supposée) | à confirmer |
 | S31 | Fenêtre de recharge / upgrade | crédits épuisés, Run verrouillé, bouton inline de l'agent | vendre | plans, packs de crédits (supposé) | à confirmer |
 | S24 | Page d'un film | `/tv/…` | regarder | lecteur, Like, Share, Tip, Workflow (ouvre le canvas du film), commentaires | — |
@@ -100,6 +101,8 @@ F00 Tout faire en parlant à l'agent (le flux principal)
     crée une section, génère les images, puis les vidéos (cartes d'action) -> S07 se remplit
     -> l'agent monte le film dans S15 -> S16 export
     clics : 2 pour démarrer, puis des validations dans le chat
+    outils de l'agent vus dans les cartes d'action : Lancer la génération, Lire la timeline,
+    Regarder le média, Modifier la timeline (+ boutons inline « Watch the timeline »)
     cas limites : crédits épuisés en plein lot (vu : 1 génération sur 2 lancée, l'agent
     s'arrête et propose la recharge), action échouée, l'agent modifie ce qu'on n'a pas
     demandé, référence ambiguë (« la seconde ») -> l'agent renvoie des puces d'asset
@@ -134,7 +137,9 @@ F07 Voix et dialogue
     cas limites : plusieurs speakers (un seul modèle les gère), référence vidéo sans piste audio
 
 F08 Monter et exporter le film
-    S15 glisser les clips sur Main -> trim/split -> musique -> texte -> captions -> S16 Export -> Download
+    raccourci vu : S15 vide -> « Laisser l'agent construire ma timeline » -> l'agent lit la
+    timeline, regarde les médias, ajoute les clips (0:00–0:15.07) et dit ce qui manque
+    à la main : S15 glisser les clips sur Main -> trim/split -> musique -> texte -> captions -> S16 Export -> Download
     clics : ~8 pour un montage minimal
     cas limites : trou au début de la timeline, captions qui verrouillent la timeline, rendu en échec, filigrane
 
@@ -180,7 +185,12 @@ F14 Donner un pourboire et retirer
 | Piste de timeline | Main (aimant), Music, Text, 3D | clip sélectionné, rognage, aimantation | S15, S17 |
 | Panneau de propriétés | clip, objet 3D | — | S15, S17 |
 | Puce de type de ligne | Scene, Action, Character, Dialogue, Shot, Parenthetical, Transition, Act | — | S11 |
-| Carte d'action de l'agent | en cours, réussie, échouée (rouge) | repliée, dépliée avec détail | S10 |
+| Carte d'action de l'agent | en cours, réussie (coche grise, ex. « Lire la timeline »), échouée (rouge), avec chevron pour voir le détail | repliée, dépliée | S10 |
+| Éditeur à blocs | titre, paragraphe, note italique, bloc scénario | survol (poignées + T), focus | S11 |
+| Liste de ressources groupée | groupe = section de la toile, Non groupés | replié, déplié, survol (+) | S15 |
+| Bascule segmentée | Scène/Caméras, 3D/2D | actif, inactif | S17 |
+| Bloc d'action de timeline 3D | ex. Orbite | sélectionné, redimensionné | S17 |
+| Bouton « Passer cette étape » | — | — | S11, S17 |
 | Puce d'asset inline | image (vignette), vidéo (▷), section | survol, clic = sélectionne le nœud | S10 |
 | Puce de suggestion / démarrage | pilule à bord fin | défaut, survol | S03, S10 |
 | Sélecteur de conversation | liste déroulante | — | S10 |
@@ -261,7 +271,7 @@ Tip, Comment.
 
 ## Matrice des fonctions
 
-Voir `features.csv`. Must : 53, should : 37, could : 15, skip : 6.
+Voir `features.csv`. Must : 58, should : 42, could : 17, skip : 6.
 
 ## Hors périmètre (impossible ou interdit à cloner)
 
@@ -278,7 +288,7 @@ Voir `features.csv`. Must : 53, should : 37, could : 15, skip : 6.
 
 ## Taille
 
-Écrans 34, flux 15, entités 27. Parties difficiles :
+Écrans 35, flux 15, entités 27. Parties difficiles :
 1. **L'agent qui fait tout** : un LLM avec appels d'outils sur le canvas, le
    script, les générations et la timeline ; planification multi-étapes,
    cartes d'action, reprise propre quand une étape échoue ou que les crédits
@@ -304,11 +314,14 @@ Taille : **XL** — à redécouper. Plan proposé en phases livrables :
 
 ## Trous à combler (avec ton propre compte)
 
-Accueil, galerie, toile, agent et menu + : **vus** (captures dans
-`replica/screens/`, locales et hors git, jamais livrées). Il manque encore :
-ESPACE DE TRAVAIL, une carte projet avec son menu ouvert, un nœud image
-sélectionné avec son panneau, l'onglet HISTOIRE, l'ÉDITEUR VIDÉO, la fenêtre
-de recharge, les notifications.
+Accueil, galerie, toile, agent, menu +, histoire, éditeur vidéo et plateau
+3D : **vus** (captures dans `replica/screens/`, locales et hors git, jamais
+livrées). Il manque encore : ESPACE DE TRAVAIL, une carte projet avec son menu
+ouvert, un nœud image sélectionné avec son panneau, l'éditeur avec des clips
+sur la timeline, la fenêtre de recharge, les notifications.
+
+Note : l'exemple de scénario pré-rempli dans Histoire vient d'un court métrage
+de Flick (« SLOP »). Le clone aura son propre modèle d'exemple.
 
 ## À faire mieux que l'original (vu sur les captures)
 
@@ -318,3 +331,8 @@ de recharge, les notifications.
 - Crédits épuisés en plein lot : une génération part, l'autre non. Le clone
   vérifie le coût total du lot avant de lancer quoi que ce soit.
 - Les titres de nœuds se chevauchent dans une section serrée. Le clone les tronque proprement.
+- L'agent répond en anglais (« Added the completed first sequence… ») alors que
+  l'interface et l'utilisateur sont en français. Le clone répond toujours dans
+  la langue de l'utilisateur.
+- Les ressources de l'éditeur ont des noms coupés (« Voiture Télécommandée - Sé… »)
+  sans infobulle. Le clone affiche le nom complet au survol.

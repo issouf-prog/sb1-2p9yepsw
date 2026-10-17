@@ -12,6 +12,8 @@ export interface CanvasActions {
   remove(ids: string[]): Promise<void>;
   duplicate(node: CanvasNode): Promise<void>;
   toggleSection(id: string): Promise<void>;
+  dissolveSection(id: string): Promise<void>;
+  sendToEditor(node: CanvasNode): Promise<void>;
   preview(node: CanvasNode): void;
 }
 

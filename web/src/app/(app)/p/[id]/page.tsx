@@ -9,13 +9,13 @@ import { useLive } from "@/hooks/use-live";
 import { ProjectHeader, VIEWS, type View } from "@/components/project/project-header";
 import { Canvas } from "@/components/project/canvas";
 import { AgentPanel } from "@/components/project/agent-panel";
+import { StoryView } from "@/components/story/story-view";
+import { EditorView } from "@/components/editor/editor-view";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
-const PLANNED: Record<Exclude<View, "canvas">, { title: string; text: string }> = {
-  story: { title: "Histoire", text: "Le document du film (brief, narration, direction créative, scénario) que l'agent lit et remplit. Prochaine étape de construction." },
+const PLANNED = {
   stage: { title: "Plateau 3D", text: "Placer personnages et caméras, répéter, enregistrer une prise de référence. Prévu en phase 4." },
-  editor: { title: "Montage", text: "Timeline, découpe, musique, sous-titres et export du film. Prévu en phase 2." },
 };
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -56,11 +56,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <main className={cn("min-w-0 flex-1", mobilePane === "agent" && "hidden lg:block")}>
             {view === "canvas" ? (
               <Canvas project={project.value} state={canvas.value!} onSelectionChange={onSel} />
+            ) : view === "story" ? (
+              <StoryView projectId={id} />
+            ) : view === "editor" ? (
+              <EditorView project={project.value} />
             ) : (
               <section className="flex h-full items-center justify-center bg-bg p-6">
                 <div className="max-w-md text-center">
-                  <h1 className="text-2xl">{PLANNED[view].title}</h1>
-                  <p className="mt-3 text-text-muted">{PLANNED[view].text}</p>
+                  <h1 className="text-2xl">{PLANNED.stage.title}</h1>
+                  <p className="mt-3 text-text-muted">{PLANNED.stage.text}</p>
                   <Link href={`/p/${id}?view=canvas`}><Button variant="secondary" className="mt-6">Aller à la toile</Button></Link>
                 </div>
               </section>

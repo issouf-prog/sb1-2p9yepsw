@@ -3,6 +3,7 @@
 
 import type {
   CanvasEdge, CanvasNode, CanvasState, ChatMessage, Conversation, Profile, Project, QuoteItem, Section, Workspace, AspectRatio,
+  StoryDocument, Timeline,
 } from "./types";
 
 export interface DataLayer {
@@ -23,6 +24,15 @@ export interface DataLayer {
   upsertNodes(ns: CanvasNode[]): Promise<void>;
   deleteNodes(ids: string[]): Promise<void>;
   addEdge(e: CanvasEdge): Promise<void>;
+
+  deleteSection(id: string): Promise<void>;
+
+  document(projectId: string): Promise<StoryDocument | null>;
+  saveDocument(projectId: string, content: unknown): Promise<void>;
+
+  timeline(projectId: string): Promise<Timeline>;
+  /** Lève ConflictError si la version a changé depuis la lecture. */
+  saveTimeline(t: Timeline): Promise<Timeline>;
 
   listConversations(projectId: string): Promise<Conversation[]>;
   createConversation(projectId: string, title?: string): Promise<Conversation>;

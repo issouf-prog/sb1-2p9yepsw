@@ -7,11 +7,11 @@ Liste des projets avec cartes et menu (renommer supprimer),projets,must,yes,yes,
 Choix du ratio (16:9 9:16 1:1 21:9 4:3 3:4 5:4),projets,must,yes,yes,épinglé en haut du canvas | clone: accueil ; pas encore modifiable dans le projet
 Catalogue de styles visuels,styles,must,yes,no,S05 avec tes propres presets
 Canvas infini (pan zoom sélection rectangle),canvas,must,yes,yes,S07 | clone: React Flow
-Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,partial,"S07 | clone: ajouter, sélection, main, note, tout afficher ; section/ressources à venir"
+Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,partial,"S07 | clone: ajouter, sélection, main, section, note, Histoire, Montage, tout afficher ; ressources à venir"
 Nœud texte comme prompt connectable,canvas,must,yes,partial,Disconnect | clone: note éditable ; pas encore connectable
 Connexions entre nœuds (prompt start frame références),canvas,must,yes,partial,Edge | clone: start frame seulement
-Copier coller supprimer des nœuds,canvas,must,yes,partial,raccourcis | clone: supprimer + dupliquer ; copier-coller à venir
-Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,partial,"clone: T, V, H, Suppr ; Entrée lance dans le panneau"
+Copier coller supprimer des nœuds,canvas,must,yes,yes,"raccourcis | clone: Ctrl+C / Ctrl+V, Suppr, dupliquer"
+Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,yes,"clone: S, T, V, H, Ctrl+C/V, Ctrl+1, Suppr ; Entrée lance dans le panneau"
 Sauvegarde automatique du canvas,canvas,must,yes,yes,clone: positions et contenus
 Nœud Generate Image (modèle prompt lot Run),images,must,yes,partial,"S08 F02 | clone: modèle, prompt, Lancer ; pas de lot"
 Coût affiché sur le bouton Run avant génération,crédits,must,yes,yes,
@@ -33,11 +33,11 @@ Débit atomique et remboursement sur échec,crédits,must,yes,yes,clone: débit 
 Plans d'abonnement Stripe mensuel et annuel,facturation,must,yes,no,S21
 Recharge ponctuelle de crédits,facturation,must,yes,partial,F13 | clone: simulée ; Stripe à brancher
 Factures et annulation,facturation,must,yes,no,S22
-Monteur : pistes Main Music Text,monteur,must,yes,no,S15
-Monteur : ajouter réordonner trim split,monteur,must,yes,no,F08
-Monteur : lecture et playhead,monteur,must,yes,no,
-Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,no,S16
-Filigrane selon le plan,monteur,must,yes,no,Free et Casual
+Monteur : pistes Main Music Text,monteur,must,yes,partial,S15 | clone: Principale + Texte ; Musique à venir
+Monteur : ajouter réordonner trim split,monteur,must,yes,yes,"F08 | clone: ajout, glisser-déposer, avant/après, durée, coupe (S)"
+Monteur : lecture et playhead,monteur,must,yes,yes,"clone: Espace, flèches, Début"
+Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,partial,S16 | clone: 720p WebM rendu dans le navigateur ; serveur à brancher
+Filigrane selon le plan,monteur,must,yes,yes,Free et Casual | clone: Gratuit et Découverte
 Projet privé ou partagé,partage,must,yes,no,
 Pages légales (CGU confidentialité),légal,must,yes,no,à toi pas copiées
 Section Créé avec Flick sur l'accueil (grille de films),projets,should,yes,yes,S03 vu ; avec tes propres films | clone: films de démonstration
@@ -48,7 +48,7 @@ Upscale image et vidéo,images,should,yes,no,
 Camera Control,images,should,yes,no,
 Extract Frame depuis une vidéo,vidéo,should,yes,no,
 Omni Reference (image vidéo audio),vidéo,should,yes,no,Standard+
-Sections (nom couleur verrou repli),canvas,should,yes,partial,S07 | clone: nom + repli
+Sections (nom couleur verrou repli),canvas,should,yes,partial,"S07 | clone: créer (S), grouper, replier, retirer ; couleur et verrou à venir"
 Dossiers dans les assets,assets,should,yes,no,
 Retrouver ses générations,assets,should,yes,no,
 Generate Voice (text to voice),audio,should,yes,no,F07
@@ -62,11 +62,11 @@ Monteur : propriétés (échelle position volume vitesse fondus),monteur,should,
 Monteur : transitions et effets,monteur,should,yes,no,
 Monteur : sous-titres générés,monteur,should,yes,no,
 Monteur : aimant et magnétisme,monteur,should,yes,no,
-Exports récents et Download again,monteur,should,yes,no,
+Exports récents et Download again,monteur,should,yes,yes,
 Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
 Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
 Export du script PDF et Word,script,should,yes,no,
-Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,S10 F00 cœur du produit | clone: agent simulé à règles : section + 2 images + 1 vidéo ; Claude à brancher
+Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,"S10 F00 cœur du produit | clone: agent simulé : écrit l'Histoire, crée section + plans + vidéo, anime, monte ; Claude à brancher"
 Agent : pièces jointes et dictée vocale,agent,must,yes,no,trombone et micro
 Agent : Chat rules et Personalize,agent,should,yes,no,
 Script to Film,script,should,yes,no,F06
@@ -103,18 +103,18 @@ Fenêtre de recharge et upgrade,facturation,must,yes,partial,S31 | clone: rechar
 Notifications,comptes,should,yes,no,S30
 Générer de la musique depuis le menu +,audio,should,yes,no,S09
 Bandeau d'annonce fermable,croissance,could,yes,no,
-Histoire : éditeur à blocs avec modèle Brief Narration Direction créative Scénario,script,must,yes,no,S11 vu ; l'agent lit et remplit ce document
-Histoire : bloc scénario au format INT. EXT. dialogue,script,should,yes,no,S11
-Éditeur : bouton Laisser l'agent construire ma timeline,agent,must,yes,no,S15 vu
-Éditeur : ressources groupées par section de la toile,monteur,should,yes,no,S15
-Éditeur : filtres Tout Favoris Archivé Enregistré,monteur,should,yes,no,S15
-Éditeur : ratio et fps de la timeline,monteur,must,yes,no,9:16 30 fps vu
+Histoire : éditeur à blocs avec modèle Brief Narration Direction créative Scénario,script,must,yes,yes,"S11 vu ; l'agent lit et remplit ce document | clone: TipTap, sauvegarde auto, plan du document"
+Histoire : bloc scénario au format INT. EXT. dialogue,script,should,yes,partial,S11 | clone: bloc scénario en police machine ; pas encore de types de ligne
+Éditeur : bouton Laisser l'agent construire ma timeline,agent,must,yes,yes,S15 vu
+Éditeur : ressources groupées par section de la toile,monteur,should,yes,yes,S15
+Éditeur : filtres Tout Favoris Archivé Enregistré,monteur,should,yes,partial,S15 | clone: Tout + Favoris
+Éditeur : ratio et fps de la timeline,monteur,must,yes,partial,9:16 30 fps vu | clone: affichés ; pas encore modifiables
 Éditeur : volume par piste,monteur,should,yes,no,piste Principal
 Plateau 3D : scène par défaut 1 caméra + 1 humain,3d,could,yes,no,S17
 Plateau 3D : blocs d'action sur la timeline (Orbite),3d,could,yes,no,S17
 Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
 Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
-Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,no,cartes d'action vues
+Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,partial,cartes d'action vues | clone: lire + monter ; regarder un média à venir
 Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,partial,amélioration : Flick répond en anglais à un utilisateur français | clone: agent simulé en français
 Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,partial,S09b vu | clone: sans archiver
 Nœud : Régénérer,canvas,must,yes,yes,S09b | clone: crée une variante
@@ -122,7 +122,7 @@ Nœud : prompt affiché sous le média avec copier et Voir plus,canvas,must,yes,
 Nœud : dimensions et durée du média,canvas,should,yes,yes,S09b
 Nœud : lecteur vidéo inline,canvas,must,yes,partial,S09b | clone: aperçu simulé
 Nœud : Enregistrer comme style,styles,should,yes,no,S09b
-Nœud : Ajouter à la timeline,monteur,must,yes,no,S09b
+Nœud : Ajouter à la timeline,monteur,must,yes,yes,S09b | clone: Envoyer au montage
 Nœud : Convertir en 3D,3d,could,yes,no,S09b image vers plateau 3D
 Favoris et archives des ressources,assets,should,yes,no,S13
 Ressources : centrer la toile sur une section,assets,should,yes,no,viseur S13

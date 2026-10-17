@@ -121,6 +121,44 @@ export interface QuoteItem {
   model: string;
 }
 
+/** Document Histoire : JSON ProseMirror/TipTap. */
+export interface StoryDocument {
+  projectId: string;
+  content: unknown;
+  /** true tant que l'utilisateur ou l'agent n'a rien écrit (modèle d'exemple). */
+  isTemplate: boolean;
+  updatedAt: string;
+}
+
+export interface TimelineClip {
+  id: string;
+  nodeId: string;
+  /** Durée affichée dans le film, en ms. */
+  durationMs: number;
+}
+
+export interface TextClip {
+  id: string;
+  text: string;
+  startMs: number;
+  durationMs: number;
+}
+
+export interface Timeline {
+  projectId: string;
+  fps: 24 | 25 | 30;
+  main: TimelineClip[];
+  text: TextClip[];
+  /** Verrou optimiste : l'agent et l'humain ne s'écrasent pas. */
+  version: number;
+}
+
+export class ConflictError extends Error {
+  constructor() {
+    super("conflict");
+  }
+}
+
 export class InsufficientCreditsError extends Error {
   constructor(public needed: number, public available: number) {
     super("insufficient_credits");

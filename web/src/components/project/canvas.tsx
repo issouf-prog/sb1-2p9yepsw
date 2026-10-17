@@ -6,13 +6,16 @@ import {
   type Edge, type Node, type NodeChange,
 } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote,
+  Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote, BoxSelect,
 } from "lucide-react";
 import { data, InsufficientCreditsError, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
 import { DEFAULT_MODEL, priceOf } from "@/lib/data/prices";
 import { gen } from "@/lib/gen";
-import { mediaSize } from "@/lib/canvas";
+import { mediaSize, GAP, SECTION_HEADER, CAPTION } from "@/lib/canvas";
+import { appendToTimeline } from "@/lib/agent/tools";
+import { titleFrom } from "@/lib/data/fake";
 import { IconButton } from "@/components/ui/icon-button";
 import { VerticalToolbar, ToolbarDivider } from "@/components/ui/canvas-bits";
 import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSub, MenuSubTrigger, MenuSubContent } from "@/components/ui/menu";
@@ -22,6 +25,9 @@ import { CanvasActionsContext, type CanvasActions } from "./canvas-actions";
 import { SectionNode, MediaNode, NoteNode } from "./nodes";
 
 const nodeTypes = { section: SectionNode, media: MediaNode, note: NoteNode };
+
+/** Presse-papiers de la toile (copier-coller de nœuds dans la même session). */
+let clipboard: CanvasNode[] = [];
 
 function toFlow(state: CanvasState, selected: Set<string>): Node[] {
   const collapsed = new Set(state.sections.filter((s) => s.collapsed).map((s) => s.id));
@@ -48,6 +54,7 @@ function toEdges(state: CanvasState): Edge[] {
 
 export function Canvas({ project, state, onSelectionChange }: { project: Project; state: CanvasState; onSelectionChange: (ids: string[]) => void }) {
   const { openTopUp } = useApp();
+  const router = useRouter();
   const flow = useReactFlow();
   const { zoom } = useViewport();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -149,7 +156,55 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       const s = state.sections.find((x) => x.id === id);
       if (s) await data.upsertSection({ ...s, collapsed: !s.collapsed });
     },
+    async dissolveSection(id) {
+      await data.deleteSection(id);
+    },
+    async sendToEditor(node) {
+      await appendToTimeline(project.id, node);
+      setNotice(`« ${node.name} » ajouté à la fin du montage.`);
+    },
     preview: setPreview,
+  };
+
+  /** Position absolue d'un nœud (les enfants de section sont en coordonnées relatives). */
+  const absolute = (n: CanvasNode) => {
+    const s = n.sectionId ? state.sections.find((x) => x.id === n.sectionId) : null;
+    return { x: n.x + (s?.x ?? 0), y: n.y + (s?.y ?? 0) };
+  };
+
+  const createSection = async () => {
+    const chosen = state.nodes.filter((n) => selected.has(n.id));
+    const { w, h } = mediaSize(project.aspectRatio);
+    if (!chosen.length) {
+      const p = centerPoint();
+      await data.upsertSection({ id: crypto.randomUUID(), projectId: project.id, name: "Nouvelle section", locked: false, collapsed: false, x: p.x, y: p.y, w: w + 2 * GAP, h: SECTION_HEADER + h + CAPTION + GAP });
+      return;
+    }
+    if (chosen.every((n) => n.sectionId && n.sectionId === chosen[0].sectionId)) {
+      setNotice("Ces plans sont déjà dans une section.");
+      return;
+    }
+    const pts = chosen.map(absolute);
+    const x = Math.min(...pts.map((p) => p.x)) - GAP;
+    const y = Math.min(...pts.map((p) => p.y)) - SECTION_HEADER;
+    const right = Math.max(...pts.map((p) => p.x)) + w + GAP;
+    const bottom = Math.max(...pts.map((p) => p.y)) + h + CAPTION + GAP;
+    const section = { id: crypto.randomUUID(), projectId: project.id, name: titleFrom(chosen[0].data.prompt ?? chosen[0].name), locked: false, collapsed: false, x, y, w: right - x, h: bottom - y };
+    await data.upsertSection(section);
+    await data.upsertNodes(chosen.map((n, i) => ({ ...n, sectionId: section.id, x: pts[i].x - x, y: pts[i].y - y })));
+  };
+
+  const copy = () => {
+    clipboard = state.nodes.filter((n) => selected.has(n.id));
+    if (clipboard.length) setNotice(`${clipboard.length} plan${clipboard.length > 1 ? "s copiés" : " copié"}.`);
+  };
+  const paste = async () => {
+    if (!clipboard.length) return;
+    const copies = clipboard.map((n) => {
+      const p = absolute(n);
+      return { ...structuredClone(n), id: crypto.randomUUID(), projectId: project.id, sectionId: null, x: p.x + 60, y: p.y + 60, name: `${n.name} (copie)` };
+    });
+    await data.upsertNodes(copies);
   };
 
   const onChange = useCallback((changes: NodeChange[]) => {
@@ -181,6 +236,11 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
         onKeyDown={(e) => {
           const t = e.target as HTMLElement;
           if (t.closest("input, textarea, select, [contenteditable]")) return;
+          if ((e.metaKey || e.ctrlKey) && e.key === "c") { copy(); return; }
+          if ((e.metaKey || e.ctrlKey) && e.key === "v") { e.preventDefault(); paste(); return; }
+          if ((e.metaKey || e.ctrlKey) && e.key === "1") { e.preventDefault(); flow.fitView({ padding: 0.25, duration: 200 }); return; }
+          if (e.metaKey || e.ctrlKey) return;
+          if (e.key === "s" || e.key === "S") { e.preventDefault(); createSection(); }
           if (e.key === "t" || e.key === "T") { e.preventDefault(); addNote(); }
           if (e.key === "h" || e.key === "H") setHand((v) => !v);
           if (e.key === "v" || e.key === "V") setHand(false);
@@ -229,11 +289,12 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
             </Menu>
             <IconButton label="Sélection" shortcut="V" active={!hand} onClick={() => setHand(false)} icon={<MousePointer2 className="size-5" />} />
             <IconButton label="Main" shortcut="H" active={hand} onClick={() => setHand(true)} icon={<Hand className="size-5" />} />
+            <IconButton label={selected.size ? "Grouper dans une section" : "Nouvelle section"} shortcut="S" onClick={createSection} icon={<BoxSelect className="size-5" />} />
             <IconButton label="Note" shortcut="T" onClick={addNote} icon={<Type className="size-5" />} />
             <ToolbarDivider />
             <IconButton label="Ressources (bientôt)" aria-disabled icon={<Images className="size-5" />} />
-            <IconButton label="Histoire (bientôt)" aria-disabled icon={<FileText className="size-5" />} />
-            <IconButton label="Montage (bientôt)" aria-disabled icon={<Clapperboard className="size-5" />} />
+            <IconButton label="Histoire" onClick={() => router.push(`/p/${project.id}?view=story`)} icon={<FileText className="size-5" />} />
+            <IconButton label="Montage" onClick={() => router.push(`/p/${project.id}?view=editor`)} icon={<Clapperboard className="size-5" />} />
             <ToolbarDivider />
             <IconButton label="Tout afficher" shortcut="Ctrl+1" onClick={() => flow.fitView({ padding: 0.25, duration: 200 })} icon={<Maximize className="size-5" />} />
             <IconButton label="Réglages (bientôt)" aria-disabled icon={<Settings className="size-5" />} />

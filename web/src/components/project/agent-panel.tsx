@@ -3,6 +3,7 @@
 import { useReactFlow } from "@xyflow/react";
 import { ChevronsRight, ChevronsLeft, Plus, Paperclip, AtSign, Mic, ArrowUp, ChevronDown, Bot, HelpCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { data, type CanvasNode, type ChatMessage, type ContentBlock, type Conversation } from "@/lib/data";
 import { runAgentTurn } from "@/lib/agent/run";
 import { useLive } from "@/hooks/use-live";
@@ -14,7 +15,7 @@ import { Menu, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/cn";
 
-const SUGGESTIONS = ["Ajoute un plan de réaction", "Anime l'image sélectionnée", "Propose trois variantes de lumière"];
+const SUGGESTIONS = ["Monte le film", "Anime l'image sélectionnée", "Une nouvelle scène : la tempête arrive"];
 
 /** Démarrages déjà lancés (évite un double tour en mode strict de React). */
 const started = new Set<string>();
@@ -27,6 +28,7 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
   onCollapse: (c: boolean) => void;
 }) {
   const { openTopUp } = useApp();
+  const router = useRouter();
   const flow = useReactFlow();
   const convs = useLive(() => data.listConversations(projectId), [projectId], projectId);
   const [convId, setConvId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
   const renderBlock = (b: ContentBlock, i: number) => {
     if (b.type === "text") return <span key={i}>{b.text}</span>;
     if (b.type === "asset") return <AssetChip key={i} kind={b.kind} label={b.label} onClick={() => focusNode(b.nodeId)} />;
-    return <Button key={i} variant="secondary" size="sm" className="mt-2" onClick={b.action === "topup" ? openTopUp : undefined}>{b.label}</Button>;
+    return <Button key={i} variant="secondary" size="sm" className="mt-2" onClick={b.action === "topup" ? openTopUp : () => router.push(`/p/${projectId}?view=editor`)}>{b.label}</Button>;
   };
 
   const selectedNodes = nodes.filter((n) => selection.includes(n.id) && n.data.mediaUrl);

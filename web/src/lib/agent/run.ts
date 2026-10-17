@@ -6,6 +6,8 @@ import { data, InsufficientCreditsError, type ActionRecord, type CanvasNode, typ
 import { DEFAULT_MODEL } from "../data/prices";
 import { gen } from "../gen";
 import { sectionSize, slot } from "../canvas";
+import { storyFromIdea } from "../story";
+import { buildTimeline } from "./tools";
 
 interface TurnInput {
   projectId: string;
@@ -55,12 +57,26 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
 
   // Demande d'animation d'une image sélectionnée.
   const selectedImage = canvas.nodes.find((n) => selectedNodeIds.includes(n.id) && n.type === "image" && n.data.mediaUrl);
-  const wantsMontage = /montage|timeline/.test(lower);
+  const wantsMontage = /\bmont(?:e|er|ez|age)\b|timeline/.test(lower);
 
   if (wantsMontage) {
-    const a = await act("read_timeline", "Lire le montage");
+    const r0 = await act("read_timeline", "Lire le montage");
+    await finish(r0, "done");
+    const a = await act("edit_timeline", "Monter les plans");
+    const r = await buildTimeline(projectId);
     await finish(a, "done");
-    await say({ type: "text", text: "Le montage automatique arrive dans une prochaine étape de construction. Vos plans sont prêts sur la toile." });
+    if (!r.added.length) {
+      await say({ type: "text", text: "Tous les plans disponibles sont déjà dans le montage. Générez-en d'autres sur la toile, ou ouvrez le montage pour ajuster les durées." });
+    } else {
+      await say(
+        { type: "text", text: `J'ai ajouté ${r.added.length} plan${r.added.length > 1 ? "s" : ""} au montage, qui dure maintenant ${(r.totalMs / 1000).toFixed(1)} s : ` },
+        ...r.added.flatMap((n, i) => [
+          { type: "asset" as const, nodeId: n.id, kind: (n.type === "video" ? "video" : "image") as "video" | "image", label: n.name },
+          { type: "text" as const, text: i < r.added.length - 1 ? ", " : ". " },
+        ]),
+        { type: "button", action: "open_editor", label: "Ouvrir le montage" },
+      );
+    }
     return;
   }
 
@@ -107,6 +123,11 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
     if (!vid) refund += unitCost[0];
     else await say({ type: "text", text: "C'est fait : " }, { type: "asset", nodeId: vid.id, kind: "video", label: vid.name }, { type: "text", text: " est relié à l'image de départ." });
   } else {
+    if (!(await data.document(projectId))) {
+      const da = await act("write_document", "Écrire le brief et le scénario");
+      await data.saveDocument(projectId, storyFromIdea(text, plan.shots));
+      await finish(da, "done");
+    }
     const sa = await act("create_section", "Créer une section");
     const section: Section = {
       id: crypto.randomUUID(), projectId, name: plan.section, locked: false, collapsed: false,

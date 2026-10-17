@@ -34,3 +34,16 @@
 .react-flow__node-section { z-index: -1 !important; }
 .react-flow__edge-path { stroke: var(--color-border-input); stroke-width: 1.25; }
 .react-flow__controls { display: none; }
+
+/* Document Histoire */
+.story-prose { font-size: var(--text-lg); line-height: 1.75; color: var(--color-text); }
+.story-prose h2 { font-size: var(--text-display); line-height: var(--text-display--line-height); font-weight: 500; margin: 3rem 0 0.5rem; }
+.story-prose h3 { font-size: var(--text-xl); margin: 2rem 0 0.5rem; }
+.story-prose p { margin: 0.5rem 0; }
+.story-prose em { color: var(--color-text-muted); }
+.story-prose ul, .story-prose ol { padding-left: 1.5rem; list-style: revert; }
+.story-prose pre {
+  margin: 1rem 0; padding: 1.5rem 2rem; background: var(--color-surface-sunken); white-space: pre-wrap;
+  font-family: "Courier New", ui-monospace, monospace; font-size: var(--text-base); line-height: 1.6;
+}
+.story-prose .is-empty::before { content: attr(data-placeholder); color: var(--color-text-subtle); float: left; height: 0; pointer-events: none; }

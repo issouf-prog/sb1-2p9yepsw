@@ -2,7 +2,7 @@
 
 import { Handle, NodeToolbar, Position, type Node, type NodeProps } from "@xyflow/react";
 import {
-  Heart, Pencil, Download, Maximize2, CopyPlus, Trash2, Copy, RefreshCw, Video, Film, Play, Loader2, AlertCircle, ChevronDown, ImageIcon, Check,
+  Heart, Pencil, Download, Maximize2, CopyPlus, Trash2, Copy, RefreshCw, Video, Film, Play, Loader2, AlertCircle, ChevronDown, ImageIcon, Check, X,
 } from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/ui/icon-button";
@@ -20,10 +20,14 @@ export type NoteRF = Node<{ node: CanvasNode }, "note">;
 const hidden = "!size-2 !min-h-0 !min-w-0 !border-0 !bg-transparent";
 
 export function SectionNode({ data }: NodeProps<SectionRF>) {
-  const { toggleSection } = useCanvasActions();
+  const { toggleSection, dissolveSection } = useCanvasActions();
   const s = data.section;
   return (
-    <div className="size-full">
+    <div className="group/section size-full">
+      <button onClick={() => dissolveSection(s.id)} title="Retirer la section (les plans restent sur la toile)" aria-label={`Retirer la section ${s.name}`}
+        className="nodrag absolute -top-12 right-0 rounded-pill p-2 text-text-muted opacity-0 hover:bg-surface-sunken hover:text-text focus:opacity-100 group-hover/section:opacity-100">
+        <X className="size-4" />
+      </button>
       <button
         onClick={() => toggleSection(s.id)}
         aria-expanded={!s.collapsed}
@@ -86,7 +90,7 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
           <MenuRow icon={<RefreshCw />} label="Relancer" onClick={() => actions.regenerate(n)} disabled={!n.data.prompt || isVideo} />
           <div className="mx-4 my-2 h-px bg-border" />
           {!isVideo && <MenuRow icon={<Video />} label="Animer cette image" onClick={() => actions.animate(n)} />}
-          <MenuRow icon={<Film />} label="Envoyer au montage (bientôt)" disabled />
+          <MenuRow icon={<Film />} label="Envoyer au montage" onClick={() => actions.sendToEditor(n)} />
           <div className="mx-4 my-2 h-px bg-border" />
           <MenuRow icon={<Trash2 />} label="Supprimer" onClick={() => actions.remove([n.id])} />
         </div>

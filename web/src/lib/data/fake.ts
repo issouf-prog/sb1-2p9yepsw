@@ -4,7 +4,9 @@
 import type { DataLayer } from "./layer";
 import {
   InsufficientCreditsError,
+  ConflictError,
   type CanvasEdge, type CanvasNode, type ChatMessage, type Conversation, type Profile, type Project, type Section, type Workspace,
+  type StoryDocument, type Timeline,
 } from "./types";
 import { priceOf } from "./prices";
 
@@ -17,6 +19,8 @@ interface Db {
   edges: CanvasEdge[];
   conversations: Conversation[];
   messages: ChatMessage[];
+  documents?: StoryDocument[];
+  timelines?: Timeline[];
   ledgerKeys: string[];
 }
 
@@ -123,6 +127,8 @@ export const fakeData: DataLayer = {
     const convIds = new Set(db.conversations.filter((c) => c.projectId === id).map((c) => c.id));
     db.conversations = db.conversations.filter((c) => c.projectId !== id);
     db.messages = db.messages.filter((m) => !convIds.has(m.conversationId));
+    db.documents = (db.documents ?? []).filter((d) => d.projectId !== id);
+    db.timelines = (db.timelines ?? []).filter((t) => t.projectId !== id);
     commit("*");
   },
 
@@ -163,6 +169,41 @@ export const fakeData: DataLayer = {
     const db = load();
     db.edges.push(clone(e));
     commit(e.projectId);
+  },
+
+  async deleteSection(id) {
+    const db = load();
+    const s = db.sections.find((x) => x.id === id);
+    if (!s) return;
+    // Les nœuds de la section restent sur la toile, en position absolue.
+    for (const n of db.nodes) if (n.sectionId === id) Object.assign(n, { sectionId: null, x: n.x + s.x, y: n.y + s.y });
+    db.sections = db.sections.filter((x) => x.id !== id);
+    commit(s.projectId);
+  },
+
+  async document(projectId) {
+    return clone((load().documents ?? []).find((d) => d.projectId === projectId) ?? null);
+  },
+  async saveDocument(projectId, content) {
+    const db = load();
+    db.documents = [...(db.documents ?? []).filter((d) => d.projectId !== projectId), { projectId, content: clone(content), isTemplate: false, updatedAt: now() }];
+    touch(db, projectId);
+    commit(projectId);
+  },
+
+  async timeline(projectId) {
+    const t = (load().timelines ?? []).find((x) => x.projectId === projectId);
+    return clone(t ?? { projectId, fps: 30, main: [], text: [], version: 0 });
+  },
+  async saveTimeline(t) {
+    const db = load();
+    const current = (db.timelines ?? []).find((x) => x.projectId === t.projectId);
+    if ((current?.version ?? 0) !== t.version) throw new ConflictError();
+    const next = { ...clone(t), version: t.version + 1 };
+    db.timelines = [...(db.timelines ?? []).filter((x) => x.projectId !== t.projectId), next];
+    touch(db, t.projectId);
+    commit(t.projectId);
+    return clone(next);
   },
 
   async listConversations(projectId) {

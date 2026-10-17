@@ -16,13 +16,14 @@ Clavier : prompt de l'accueil atteint au Tab.
 | S03 Accueil | 2026-10-17 | fait | styles, pièces jointes, dictée, visite guidée | — |
 | S04 Projets | 2026-10-17 | fait | dossiers, partage | — |
 | S04b Barre globale | 2026-10-17 | fait | notifications | le bouton Créer restait visible sur mobile (conflit de classes) |
-| S07 Toile | 2026-10-17 | partiel | sections manuelles, copier-coller, connexions manuelles, panneaux flottants | synchroniser la sélection React Flow avec les données en temps réel |
+| S07 Toile | 2026-10-17 | partiel | connexions manuelles, panneaux flottants, couleur/verrou de section | synchroniser la sélection React Flow avec les données ; éviter les sections imbriquées |
 | S08 Panneau de génération | 2026-10-17 | partiel | lot, durée/résolution vidéo, références | — |
 | S09 Menu + | 2026-10-17 | partiel | import, voix, musique | — |
-| S09b Nœud sélectionné | 2026-10-17 | partiel | archiver, ajouter au dossier/montage, convertir en 3D ; renommer passe par une boîte native | — |
+| S09b Nœud sélectionné | 2026-10-17 | partiel | archiver, ajouter au dossier, convertir en 3D ; renommer passe par une boîte native | — |
 | S10 Agent | 2026-10-17 | partiel | vrai LLM (Claude), @, pièces jointes, dictée | l'agent simulé couvre seulement « créer une séquence » et « animer l'image sélectionnée » |
-| S11 Histoire | — | écran d'attente | tout | — |
-| S15 Montage | — | écran d'attente | tout | — |
+| S11 Histoire | 2026-10-17 | fait | types de ligne du scénario, import/export de fichiers | garder l'éditeur à jour quand l'agent écrit sans écraser la saisie en cours |
+| S15 Montage | 2026-10-17 | partiel | piste musique, transitions, effets, sous-titres auto, plein écran ; ajout de texte par boîte native | rendre la timeline lisible avec l'aimant toujours actif |
+| S16 Export | 2026-10-17 | partiel | 1080p/4K et MP4 (rendu serveur) | les navigateurs ignorent les noms de fichier accentués : nom converti en ASCII |
 | S17 Plateau 3D | — | écran d'attente | tout | — |
 | S21 Tarifs | 2026-10-17 | partiel | prix réels, Stripe | — |
 | S23 Galerie | 2026-10-17 | partiel | publication, page film | — |
@@ -31,4 +32,11 @@ Clavier : prompt de l'accueil atteint au Tab.
 Captures pour replica-diff : `replica/clone-screens/` (S02, S03, S03-filled, S03-390, S04, S07, S07-390,
 S08, S09b, S10-credits, S10-390).
 
-Parité (`parity.py`) : 28,3 / 100, indispensables 17 sur 60.
+## 2e passe (2026-10-17)
+
+Vérifié dans Chromium : l'agent écrit le brief, la narration et le scénario au premier tour ; édition manuelle
+sauvegardée et conservée au rechargement ; « Laisser l'agent monter le film » → 2 clips (8 s) ; lecture, coupe
+sous la tête de lecture (3 clips) ; export 720p → fichier WebM réel de 2,3 Mo téléchargé ; Ctrl+C/Ctrl+V d'un plan ;
+« Monte le film » dans le chat → plan ajouté (11 s). 0 erreur console ; 390 px sans débordement.
+
+Parité (`parity.py`) : 39,6 / 100, indispensables 25 sur 60 (était 28,3 et 17).

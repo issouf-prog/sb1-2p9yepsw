@@ -1,0 +1,96 @@
+feature,area,priority,original,clone,notes
+Inscription et connexion email + Google,comptes,must,yes,no,S02
+Crédits offerts à l'inscription,crédits,must,yes,no,300 chez Flick
+Page Projets avec boîte de prompt,projets,must,yes,no,S03 F01
+Bouton Blank canvas,projets,must,yes,no,S03
+Liste des projets avec cartes et menu (renommer supprimer),projets,must,yes,no,S04 onglets exacts à confirmer
+Choix du ratio (16:9 9:16 1:1 21:9 4:3 3:4 5:4),projets,must,yes,no,épinglé en haut du canvas
+Catalogue de styles visuels,styles,must,yes,no,S05 avec tes propres presets
+Canvas infini (pan zoom sélection rectangle),canvas,must,yes,no,S07
+Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,no,S07
+Nœud texte comme prompt connectable,canvas,must,yes,no,Disconnect
+Connexions entre nœuds (prompt start frame références),canvas,must,yes,no,Edge
+Copier coller supprimer des nœuds,canvas,must,yes,no,raccourcis
+Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,no,
+Sauvegarde automatique du canvas,canvas,must,yes,no,
+Nœud Generate Image (modèle prompt lot Run),images,must,yes,no,S08 F02
+Coût affiché sur le bouton Run avant génération,crédits,must,yes,no,
+Référence @asset dans les prompts,canvas,must,yes,no,
+Statut de génération sur le nœud (en cours terminé échec),images,must,yes,no,
+Modèles verrouillés selon le plan,crédits,must,yes,no,Run devient Upgrade
+Edit Image,images,must,yes,no,S09
+Character Reference (≤5 perso ≤5 scène),images,must,yes,no,F03
+Generate Video depuis une image (start frame),vidéo,must,yes,no,F04
+End frame optionnel,vidéo,must,yes,no,selon modèle
+Choix du modèle vidéo durée résolution,vidéo,must,yes,no,
+Modèle Auto,vidéo,must,yes,no,
+Upload d'images et de vidéos,assets,must,yes,no,S13
+Panneau Assets du projet,assets,must,yes,no,
+Modération des prompts et sorties (flagged),sécurité,must,yes,no,obligatoire avant vente
+File de jobs asynchrone multi-fournisseurs,infra,must,yes,no,via API officielles ou fal.ai/Replicate
+Solde de crédits et grand livre,crédits,must,yes,no,CreditLedger
+Débit atomique et remboursement sur échec,crédits,must,yes,no,
+Plans d'abonnement Stripe mensuel et annuel,facturation,must,yes,no,S21
+Recharge ponctuelle de crédits,facturation,must,yes,no,F13
+Factures et annulation,facturation,must,yes,no,S22
+Monteur : pistes Main Music Text,monteur,must,yes,no,S15
+Monteur : ajouter réordonner trim split,monteur,must,yes,no,F08
+Monteur : lecture et playhead,monteur,must,yes,no,
+Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,no,S16
+Filigrane selon le plan,monteur,must,yes,no,Free et Casual
+Projet privé ou partagé,partage,must,yes,no,
+Pages légales (CGU confidentialité),légal,must,yes,no,à toi pas copiées
+Galerie de films récents dans l'accueil,projets,must,yes,no,à confirmer avec tes captures
+Create My Style (1 à 5 images de référence),styles,should,yes,no,S06
+Change Style (transfert de style),images,should,yes,no,
+Remove background,images,should,yes,no,
+Upscale image et vidéo,images,should,yes,no,
+Camera Control,images,should,yes,no,
+Extract Frame depuis une vidéo,vidéo,should,yes,no,
+Omni Reference (image vidéo audio),vidéo,should,yes,no,Standard+
+Sections (nom couleur verrou repli),canvas,should,yes,no,S07
+Dossiers dans les assets,assets,should,yes,no,
+Retrouver ses générations,assets,should,yes,no,
+Generate Voice (text to voice),audio,should,yes,no,F07
+Sélecteur de voix avec filtres,audio,should,yes,no,S14
+Plusieurs speakers,audio,should,yes,no,
+Character Dialogue (lipsync),audio,should,yes,no,
+Import audio,audio,should,yes,no,
+Musique générée,audio,should,yes,no,
+Effets sonores (SFX),audio,should,yes,no,
+Monteur : propriétés (échelle position volume vitesse fondus),monteur,should,yes,no,
+Monteur : transitions et effets,monteur,should,yes,no,
+Monteur : sous-titres générés,monteur,should,yes,no,
+Monteur : aimant et magnétisme,monteur,should,yes,no,
+Exports récents et Download again,monteur,should,yes,no,
+Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
+Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
+Export du script PDF et Word,script,should,yes,no,
+Agent IA dans le chat (génère organise monte),agent,should,yes,no,S10
+Agent : pièces jointes et voix,agent,should,yes,no,
+Agent : Chat rules et Personalize,agent,should,yes,no,
+Script to Film,script,should,yes,no,F06
+Partage par email (can view / can edit),partage,should,yes,no,S18
+Lien de partage (none / view / edit),partage,should,yes,no,
+Workspaces et rôles owner member guest,équipes,should,yes,no,S20
+Pool de crédits d'équipe et conso par membre,équipes,should,yes,no,
+Langues de l'interface (10),comptes,should,yes,no,FR en premier
+Collaboration temps réel sur le canvas,partage,could,yes,no,CRDT
+Commentaires,partage,could,yes,no,
+3D Stage (composants caméras gizmo),3d,could,yes,no,S17
+3D Stage : Rehearse et Record vers le canvas,3d,could,yes,no,F10
+Galerie publique de films,galerie,could,yes,no,S23
+Page film (Like Share Workflow),galerie,could,yes,no,S24
+Publier avec le workflow,galerie,could,yes,no,F09
+Profil créateur,galerie,could,yes,no,S25
+Pourboires en crédits,galerie,could,yes,no,S26
+Retraits en argent (cash-out),galerie,could,yes,no,S27 obligations légales de paiement
+Parrainage et Earn Credits,croissance,could,yes,no,
+Crédits gratuits hebdomadaires,crédits,could,yes,no,100 par semaine chez Flick
+Pages outils SEO,croissance,could,yes,no,S28 avec tes propres textes
+Bibliothèque Flickpedia de plans de films,références,skip,yes,skip,contenu sous droits ; possible avec ta propre bibliothèque
+Les 900+ styles de Flick,styles,skip,yes,skip,reconstruire le système avec tes presets
+Modèle maison Flick,modèles,skip,yes,skip,propriété de FlickArt
+Midjourney,modèles,skip,yes,skip,pas d'API publique officielle
+Entraînement de modèles sur mesure (Enterprise),modèles,skip,yes,skip,hors de portée au lancement
+Communauté (films Discord festival résidence),communauté,skip,yes,skip,le réseau ne se clone pas

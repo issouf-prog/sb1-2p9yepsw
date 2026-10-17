@@ -116,6 +116,18 @@ Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
 Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
 Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,no,cartes d'action vues
 Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,no,amélioration : Flick répond en anglais à un utilisateur français
+Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,no,S09b vu
+Nœud : Régénérer,canvas,must,yes,no,S09b
+Nœud : prompt affiché sous le média avec copier et Voir plus,canvas,must,yes,no,S09b
+Nœud : dimensions et durée du média,canvas,should,yes,no,S09b
+Nœud : lecteur vidéo inline,canvas,must,yes,no,S09b
+Nœud : Enregistrer comme style,styles,should,yes,no,S09b
+Nœud : Ajouter à la timeline,monteur,must,yes,no,S09b
+Nœud : Convertir en 3D,3d,could,yes,no,S09b image vers plateau 3D
+Favoris et archives des ressources,assets,should,yes,no,S13
+Ressources : centrer la toile sur une section,assets,should,yes,no,viseur S13
+Panneaux flottants Ressources et Histoire sur la toile,canvas,should,yes,no,S11b S13
+Nœud : modifier le prompt en place et relancer,canvas,should,no,no,amélioration
 Bibliothèque Flickpedia de plans de films,références,skip,yes,skip,contenu sous droits ; possible avec ta propre bibliothèque
 Les 900+ styles de Flick,styles,skip,yes,skip,reconstruire le système avec tes presets
 Modèle maison Flick,modèles,skip,yes,skip,propriété de FlickArt

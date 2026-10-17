@@ -39,7 +39,7 @@ on n'en prend rien.
 | 20 | outil storyboard | https://flick.art/tools/ai-storyboard-generator | page SEO d'outil, FAQ, liste des autres outils |
 | 21 | CGU | https://flick.art/terms | propriété des sorties à l'utilisateur (5.2b) |
 | 22 | fiche YC | https://www.ycombinator.com/companies/flick | positionnement |
-| 23 | ton propre compte (captures) | https://flick.art/projects?tab=home | 8 captures du 2026-10-17 dans `replica/screens/` (locales, hors git) : accueil, galerie, toile + agent, menu +, éditeur vidéo, plateau 3D, histoire |
+| 23 | ton propre compte (captures) | https://flick.art/projects?tab=home | 13 captures du 2026-10-17 dans `replica/screens/` (locales, hors git) : accueil, galerie, toile + agent, menu +, éditeur vidéo, plateau 3D, histoire, nœud sélectionné + menu, panneaux flottants |
 
 ## Boucle principale
 
@@ -63,11 +63,12 @@ voit et retouche le travail de l'agent. Tout part d'une seule boîte de prompt
 | S07 | Toile (canvas) | onglet TOILE d'un projet | voir et retoucher le travail de l'agent | barre projet : logo, nom du projet tronqué, Flickpedia, onglets HISTOIRE / TOILE / PLATEAU 3D / ÉDITEUR VIDÉO, cloche, Partager, crédits, avatar ; barre d'outils verticale flottante à gauche : poignée, + (noir), sélection, section, texte T, grille, assets, script, monteur, réglages, zoom en % (43 %) ; sections à fond bleu clair avec en-tête repliable (chevron + nom) ; nœuds titrés en ligne reliés par des traits fins ; nœud vidéo avec bouton lecture ; placeholder pointillé « Image vers vidéo · Prêt à générer vidéo » | vide, rempli, génération en cours, placeholder — **vu** |
 | S08 | Panneau d'un nœud (sous le nœud) | sélectionner un nœud | régler une génération | dropdown modèle (cadenas si hors plan), prompt avec @, 1x lot, engrenage, Run + coût | par défaut, verrouillé (« Upgrade »), en cours, signalé (flagged), échec |
 | S09 | Menu + de la toile | bouton + de la barre gauche | ajouter un nœud | Téléverser, Note textuelle, Générer une image, Générer une vidéo › (sous-menu), Générer une voix, Générer de la musique | — **vu** |
-| S09b | Menu contextuel d'un nœud | clic droit / menus Image, Video, Audio | enchaîner une action | Edit Image, Change Style, Remove background, Character Reference, Generate Video, Generate Voice, Extract Frame | — |
+| S09b | Nœud sélectionné : barre + carte + menu | clic sur un nœud (plusieurs à la fois possible, chacun garde sa barre et son menu) | agir sur un média | **barre flottante au-dessus** : cœur (favori), archiver, titre + crayon (renommer), télécharger, plein écran, dupliquer, fermer ; **carte** : média (vidéo avec lecture, curseur, son), dimensions « 864 × 1536px » (+ « 15.1s » pour une vidéo), prompt surligné en jaune tronqué + copier le prompt + « Voir plus ⌄ » ; **menu à droite** : Régénérer │ Image ›, Vidéo ›, Audio ›, Enregistrer comme style (image) │ Ajouter au dossier ›, Ajouter à la timeline, Convertir en 3D (image) | image, vidéo — **vu** ; sous-menus Image/Vidéo/Audio = Edit Image, Change Style, Remove background, Character Reference, Generate Video, Generate Voice, Extract Frame (doc) |
 | S10 | Agent (panneau de droite, pleine hauteur) | toujours ouvert dans un projet, repliable (») | **le cœur du produit : l'agent fait tout** | en-tête : replier », icône de l'agent, titre de la conversation + liste déroulante (plusieurs conversations par projet), vignette du nœud sélectionné, nouvelle note, + nouvelle conversation ; puces de suggestion (ex. « Revoir le raccord d'abord ») ; message utilisateur en bloc encadré aligné à droite ; **carte d'action** (nom de l'action + statut, ex. « Lancer la génération · Échoué » en rouge avec le détail) ; réponse de l'agent en texte riche avec **puces d'asset inline** (vignette + nom, cliquables vers le nœud) et **boutons inline** (ex. « recharger les crédits ») ; lien Besoin d'aide ; saisie « Brainstorme ou crée n'importe quoi avec le chat · @ pour référencer une ressource », trombone, @, sélecteur de modèle « Auto ^ », bouton micro rond | vide, en réflexion, actions en cours, action échouée, crédits épuisés (ouvre la fenêtre de recharge) — **vu** |
 | S11 | Histoire | onglet HISTOIRE | le document de projet que l'agent lit et remplit | **éditeur à blocs** (poignées + et T au survol d'un bloc), pleine largeur ; modèle pré-rempli : note en italique « Ceci est un modèle… demandez à l'agent de l'écrire », puis 4 sections titrées avec une ligne d'aide : **Brief** (ce qu'est le film, pour qui), **Narration** (ce qui se passe, dans l'ordre), **Direction créative** (esthétique, ton, références), **Scénario** (bloc au format scénario sur fond gris : INT./EXT., action, dialogue) ; mini-plan des sections à gauche (traits) ; réglages en haut à droite (curseurs) ; bouton « Passer cette étape » en bas à gauche (visite guidée) | modèle, rempli par l'agent — **vu** ; l'éditeur de scénario décrit par la doc (rail des scènes, puces de type) vit dans le bloc Scénario |
 | S12 | Import de script (modale) | S11 → Upload | importer .fountain/.txt/.fdx/.pdf/.docx | Import as-is / Let AI read it / Open chat | analyse, lignes incertaines, PDF scanné |
-| S13 | Assets | barre d'outils → Assets | médiathèque du projet | dossiers, Ungrouped, Add to folder, uploads | vide, rempli |
+| S13 | Ressources (panneau flottant) | bouton images de la barre gauche (bouton actif = rond gris) | médiathèque du projet sans quitter la toile | même panneau que l'éditeur vidéo : Tout / Favoris / Archivé │ Enregistré, filtrer, trier, chercher, replier tout, +, liste/grille ; groupes par section avec **viseur (centrer la toile sur la section)**, crayon, compteur ; Non groupés ; ligne sélectionnée = nœud sélectionné | rempli — **vu** |
+| S11b | Histoire (panneau flottant) | bouton document de la barre gauche | lire le brief en travaillant sur la toile | le document Histoire en panneau central par-dessus la toile, à côté des Ressources | — **vu** |
 | S14 | Sélecteur de voix (modale) | nœud Generate Voice → Select voice | choisir une voix | onglet Explore, recherche, filtres langue/âge/genre/usage, aperçu au survol, Use | rempli |
 | S15 | Éditeur vidéo | onglet ÉDITEUR VIDÉO | monter le film (ou le laisser monter par l'agent) | **3 colonnes + timeline**. Gauche : onglets RESSOURCES / SFX / EFFETS / TRANSITIONS ; 3 boutons d'affichage des panneaux ; filtres Tout / Favoris / Archivé │ Enregistré avec compteurs ; outils filtrer, trier, chercher, +, vue liste / grille ; ressources **groupées par section de la toile** (nom, crayon, compteur) puis « Non groupés » ; ligne : vignette, titre, + pour ajouter, durée (15s). Centre : aperçu ; état vide « Transformez vos plans en vidéo » + bouton noir **« Laisser l'agent construire ma timeline »** + « ou glissez un plan depuis le panneau Ressources ». Droite : propriétés (« Sélectionnez un clip pour afficher ses propriétés »). Barre de timeline : aide ?, zoom −/+, ratio (9:16), 30 fps, lecture + timecode 00:00:00 / 00:00:00, plein écran, sélection, ciseaux, rogner gauche / couper / rogner droite (grisés sans clip), aimant, magnétisme, sous-titres CC, texte T, **Exporter**. Règle avec tête de lecture en pastille rouge ; piste « Principal » avec haut-parleur et curseur de volume ; barre de défilement horizontale | vide — **vu** ; rempli, sous-titres en cours |
 | S16 | Export (modale) | S15 → Export | sortir le film | 720p/1080p/4K, filigrane (forcé en Free/Casual), Rendering, Download again, Recent exports, Publier sur la galerie | rendu, terminé, échec |
@@ -175,7 +176,9 @@ F14 Donner un pourboire et retirer
 | Dropdown de modèle | image, vidéo, audio, édition | disponible, verrouillé, plage de coût | S08 |
 | Compteur de lot « 1x » | 1 à 4 | — | S08 |
 | Nœud canvas | texte, image, vidéo, audio, génération (placeholder), 3D | inactif, sélectionné, en cours, terminé, échec, signalé | S07 |
-| Connexion entre nœuds | entrée prompt, start frame, end frame, référence | — | S07 |
+| Connexion entre nœuds | courbe de Bézier grise fine ; entrée prompt, start frame, end frame, référence | — | S07 |
+| Barre flottante de nœud | image, vidéo | — | S09b |
+| Carte média | image (dimensions), vidéo (lecteur + durée) ; prompt surligné, Voir plus | repliée, dépliée | S09b |
 | Section | — | nommée, colorée, verrouillée, repliée | S07 |
 | Barre d'outils verticale | canvas, 3D | outil actif | S07, S17 |
 | Contrôle de zoom | — | 50 %, 100 %, 200 %, ajuster | S07 |
@@ -271,7 +274,7 @@ Tip, Comment.
 
 ## Matrice des fonctions
 
-Voir `features.csv`. Must : 58, should : 42, could : 17, skip : 6.
+Voir `features.csv`. Must : 63, should : 48, could : 18, skip : 6.
 
 ## Hors périmètre (impossible ou interdit à cloner)
 
@@ -288,7 +291,7 @@ Voir `features.csv`. Must : 58, should : 42, could : 17, skip : 6.
 
 ## Taille
 
-Écrans 35, flux 15, entités 27. Parties difficiles :
+Écrans 36, flux 15, entités 27. Parties difficiles :
 1. **L'agent qui fait tout** : un LLM avec appels d'outils sur le canvas, le
    script, les générations et la timeline ; planification multi-étapes,
    cartes d'action, reprise propre quand une étape échoue ou que les crédits
@@ -317,7 +320,7 @@ Taille : **XL** — à redécouper. Plan proposé en phases livrables :
 Accueil, galerie, toile, agent, menu +, histoire, éditeur vidéo et plateau
 3D : **vus** (captures dans `replica/screens/`, locales et hors git, jamais
 livrées). Il manque encore : ESPACE DE TRAVAIL, une carte projet avec son menu
-ouvert, un nœud image sélectionné avec son panneau, l'éditeur avec des clips
+ouvert, le panneau de réglages d'un nœud de génération (modèle, Run + coût), l'éditeur avec des clips
 sur la timeline, la fenêtre de recharge, les notifications.
 
 Note : l'exemple de scénario pré-rempli dans Histoire vient d'un court métrage
@@ -334,5 +337,7 @@ de Flick (« SLOP »). Le clone aura son propre modèle d'exemple.
 - L'agent répond en anglais (« Added the completed first sequence… ») alors que
   l'interface et l'utilisateur sont en français. Le clone répond toujours dans
   la langue de l'utilisateur.
+- Le prompt complet est caché derrière « Voir plus » et coupé en 3 lignes ; le
+  clone permet de le modifier en place et de relancer (Régénérer avec ce prompt).
 - Les ressources de l'éditeur ont des noms coupés (« Voiture Télécommandée - Sé… »)
   sans infobulle. Le clone affiche le nom complet au survol.

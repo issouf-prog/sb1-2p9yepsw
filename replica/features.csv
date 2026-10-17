@@ -19,13 +19,13 @@ Référence @asset dans les prompts,canvas,must,yes,no,
 Statut de génération sur le nœud (en cours terminé échec),images,must,yes,yes,
 Modèles verrouillés selon le plan,crédits,must,yes,no,Run devient Upgrade
 Edit Image,images,must,yes,no,S09
-Character Reference (≤5 perso ≤5 scène),images,must,yes,no,F03
+Character Reference (≤5 perso ≤5 scène),images,must,yes,partial,F03 | clone: 1 à 5 images personnage reliées ; scène de référence à venir
 Generate Video depuis une image (start frame),vidéo,must,yes,partial,F04 | clone: simulée : aperçu animé de l'image
 End frame optionnel,vidéo,must,yes,no,selon modèle
 Choix du modèle vidéo durée résolution,vidéo,must,yes,partial,clone: 3 modèles ; durée/résolution à venir
 Modèle Auto,vidéo,must,yes,no,
 Upload d'images et de vidéos,assets,must,yes,no,S13
-Panneau Assets du projet,assets,must,yes,no,
+Panneau Assets du projet,assets,must,yes,yes,clone: panneau Ressources flottant + montage
 Modération des prompts et sorties (flagged),sécurité,must,yes,no,obligatoire avant vente
 File de jobs asynchrone multi-fournisseurs,infra,must,yes,no,via API officielles ou fal.ai/Replicate
 Solde de crédits et grand livre,crédits,must,yes,partial,CreditLedger | clone: solde + clés d'idempotence (simulé)
@@ -33,12 +33,12 @@ Débit atomique et remboursement sur échec,crédits,must,yes,yes,clone: débit 
 Plans d'abonnement Stripe mensuel et annuel,facturation,must,yes,no,S21
 Recharge ponctuelle de crédits,facturation,must,yes,partial,F13 | clone: simulée ; Stripe à brancher
 Factures et annulation,facturation,must,yes,no,S22
-Monteur : pistes Main Music Text,monteur,must,yes,partial,S15 | clone: Principale + Texte ; Musique à venir
+Monteur : pistes Main Music Text,monteur,must,yes,yes,"S15 | clone: Principale, Texte, Son (lecture synchronisée)"
 Monteur : ajouter réordonner trim split,monteur,must,yes,yes,"F08 | clone: ajout, glisser-déposer, avant/après, durée, coupe (S)"
 Monteur : lecture et playhead,monteur,must,yes,yes,"clone: Espace, flèches, Début"
-Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,partial,S16 | clone: 720p WebM rendu dans le navigateur ; serveur à brancher
+Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,partial,S16 | clone: 720p WebM avec son (VP9 + Opus) rendu dans le navigateur ; serveur à brancher
 Filigrane selon le plan,monteur,must,yes,yes,Free et Casual | clone: Gratuit et Découverte
-Projet privé ou partagé,partage,must,yes,no,
+Projet privé ou partagé,partage,must,yes,yes,
 Pages légales (CGU confidentialité),légal,must,yes,no,à toi pas copiées
 Section Créé avec Flick sur l'accueil (grille de films),projets,should,yes,yes,S03 vu ; avec tes propres films | clone: films de démonstration
 Create My Style (1 à 5 images de référence),styles,should,yes,no,S06
@@ -50,13 +50,13 @@ Extract Frame depuis une vidéo,vidéo,should,yes,no,
 Omni Reference (image vidéo audio),vidéo,should,yes,no,Standard+
 Sections (nom couleur verrou repli),canvas,should,yes,partial,"S07 | clone: créer (S), grouper, replier, retirer ; couleur et verrou à venir"
 Dossiers dans les assets,assets,should,yes,no,
-Retrouver ses générations,assets,should,yes,no,
-Generate Voice (text to voice),audio,should,yes,no,F07
-Sélecteur de voix avec filtres,audio,should,yes,no,S14
+Retrouver ses générations,assets,should,yes,yes,clone: Ressources groupées par section
+Generate Voice (text to voice),audio,should,yes,yes,F07 | clone: simulée (WAV synthétisé)
+Sélecteur de voix avec filtres,audio,should,yes,partial,S14 | clone: 4 voix dans une liste ; filtres à venir
 Plusieurs speakers,audio,should,yes,no,
 Character Dialogue (lipsync),audio,should,yes,no,
 Import audio,audio,should,yes,no,
-Musique générée,audio,should,yes,no,
+Musique générée,audio,should,yes,yes,clone: simulée (WAV synthétisé)
 Effets sonores (SFX),audio,should,yes,no,
 Monteur : propriétés (échelle position volume vitesse fondus),monteur,should,yes,no,
 Monteur : transitions et effets,monteur,should,yes,no,
@@ -66,12 +66,12 @@ Exports récents et Download again,monteur,should,yes,yes,
 Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
 Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
 Export du script PDF et Word,script,should,yes,no,
-Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,"S10 F00 cœur du produit | clone: agent simulé : écrit l'Histoire, crée section + plans + vidéo, anime, monte ; Claude à brancher"
+Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,"S10 F00 cœur du produit | clone: agent simulé : Histoire, séquence, animation, montage, musique, voix off, fiche personnage ; Claude à brancher"
 Agent : pièces jointes et dictée vocale,agent,must,yes,no,trombone et micro
 Agent : Chat rules et Personalize,agent,should,yes,no,
 Script to Film,script,should,yes,no,F06
-Partage par email (can view / can edit),partage,should,yes,no,S18
-Lien de partage (none / view / edit),partage,should,yes,no,
+Partage par email (can view / can edit),partage,should,yes,partial,S18 | clone: enregistré ; envoi d'e-mail avec le backend
+Lien de partage (none / view / edit),partage,should,yes,partial,clone: réglage + copie ; contrôle d'accès avec le backend
 Workspaces et rôles owner member guest,équipes,should,yes,no,S20
 Pool de crédits d'équipe et conso par membre,équipes,should,yes,no,
 Langues de l'interface (10),comptes,should,yes,no,FR en premier
@@ -101,7 +101,7 @@ Projets récents avec lien Tous les projets,projets,must,yes,yes,S03
 Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,yes,S04b
 Fenêtre de recharge et upgrade,facturation,must,yes,partial,S31 | clone: recharge simulée
 Notifications,comptes,should,yes,no,S30
-Générer de la musique depuis le menu +,audio,should,yes,no,S09
+Générer de la musique depuis le menu +,audio,should,yes,yes,S09
 Bandeau d'annonce fermable,croissance,could,yes,no,
 Histoire : éditeur à blocs avec modèle Brief Narration Direction créative Scénario,script,must,yes,yes,"S11 vu ; l'agent lit et remplit ce document | clone: TipTap, sauvegarde auto, plan du document"
 Histoire : bloc scénario au format INT. EXT. dialogue,script,should,yes,partial,S11 | clone: bloc scénario en police machine ; pas encore de types de ligne
@@ -116,7 +116,7 @@ Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
 Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
 Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,partial,cartes d'action vues | clone: lire + monter ; regarder un média à venir
 Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,partial,amélioration : Flick répond en anglais à un utilisateur français | clone: agent simulé en français
-Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,partial,S09b vu | clone: sans archiver
+Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,partial,S09b vu | clone: sans archiver ; renommer via modale
 Nœud : Régénérer,canvas,must,yes,yes,S09b | clone: crée une variante
 Nœud : prompt affiché sous le média avec copier et Voir plus,canvas,must,yes,yes,S09b
 Nœud : dimensions et durée du média,canvas,should,yes,yes,S09b
@@ -124,9 +124,9 @@ Nœud : lecteur vidéo inline,canvas,must,yes,partial,S09b | clone: aperçu simu
 Nœud : Enregistrer comme style,styles,should,yes,no,S09b
 Nœud : Ajouter à la timeline,monteur,must,yes,yes,S09b | clone: Envoyer au montage
 Nœud : Convertir en 3D,3d,could,yes,no,S09b image vers plateau 3D
-Favoris et archives des ressources,assets,should,yes,no,S13
-Ressources : centrer la toile sur une section,assets,should,yes,no,viseur S13
-Panneaux flottants Ressources et Histoire sur la toile,canvas,should,yes,no,S11b S13
+Favoris et archives des ressources,assets,should,yes,partial,S13 | clone: favoris ; archives à venir
+Ressources : centrer la toile sur une section,assets,should,yes,yes,viseur S13
+Panneaux flottants Ressources et Histoire sur la toile,canvas,should,yes,partial,S11b S13 | clone: Ressources ; Histoire ouvre l'onglet
 Nœud : modifier le prompt en place et relancer,canvas,should,no,no,amélioration
 Bibliothèque Flickpedia de plans de films,références,skip,yes,skip,contenu sous droits ; possible avec ta propre bibliothèque
 Les 900+ styles de Flick,styles,skip,yes,skip,reconstruire le système avec tes presets

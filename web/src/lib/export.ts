@@ -30,8 +30,37 @@ export async function exportFilm(opts: {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  const stream = canvas.captureStream(timeline.fps);
-  const type = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+  const video = canvas.captureStream(timeline.fps);
+
+  // Piste son : chaque clip audio est programmé à son instant, avec son volume.
+  const audioClips = (timeline.audio ?? []).filter((c) => nodes.get(c.nodeId)?.data.mediaUrl);
+  let actx: AudioContext | null = null;
+  let scheduleAudio = () => {};
+  const tracks = [...video.getVideoTracks()];
+  if (audioClips.length) {
+    actx = new AudioContext();
+    const dest = actx.createMediaStreamDestination();
+    const buffers = await Promise.all(audioClips.map(async (c) => {
+      const res = await fetch(nodes.get(c.nodeId)!.data.mediaUrl!);
+      return actx!.decodeAudioData(await res.arrayBuffer());
+    }));
+    tracks.push(...dest.stream.getAudioTracks());
+    scheduleAudio = () => {
+      const t0 = actx!.currentTime + 0.05;
+      audioClips.forEach((c, i) => {
+        const src = actx!.createBufferSource();
+        src.buffer = buffers[i];
+        const g = actx!.createGain();
+        g.gain.value = c.volume;
+        src.connect(g).connect(dest);
+        src.start(t0 + c.startMs / 1000, 0, c.durationMs / 1000);
+      });
+    };
+  }
+  const stream = new MediaStream(tracks);
+  const withAudio = tracks.length > 1;
+  const pick = [withAudio ? "video/webm;codecs=vp9,opus" : "video/webm;codecs=vp9", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m))!;
+  const type = pick;
   const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 5_000_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
@@ -70,7 +99,9 @@ export async function exportFilm(opts: {
     }
   };
 
+  if (actx?.state === "suspended") await actx.resume();
   rec.start(250);
+  scheduleAudio();
   const t0 = performance.now();
   await new Promise<void>((resolve) => {
     const tick = () => {
@@ -83,5 +114,7 @@ export async function exportFilm(opts: {
     tick();
   });
   rec.stop();
-  return done;
+  const blob = await done;
+  await actx?.close();
+  return blob;
 }

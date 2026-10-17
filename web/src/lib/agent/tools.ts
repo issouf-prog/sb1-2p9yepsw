@@ -1,6 +1,6 @@
 // Outils partagés entre l'interface et l'agent (un bouton et l'agent appellent la même fonction).
 import { data, ConflictError, type CanvasNode } from "../data";
-import { defaultDuration } from "../timeline";
+import { defaultDuration, totalMs } from "../timeline";
 
 /** Construit la timeline avec les plans de la toile : sections dans l'ordre, vidéos de préférence à leur image source. */
 export async function buildTimeline(projectId: string): Promise<{ added: CanvasNode[]; totalMs: number }> {
@@ -29,6 +29,24 @@ export async function appendToTimeline(projectId: string, node: CanvasNode) {
     const tl = await data.timeline(projectId);
     try {
       return await data.saveTimeline({ ...tl, main: [...tl.main, { id: crypto.randomUUID(), nodeId: node.id, durationMs: defaultDuration(node) }] });
+    } catch (e) {
+      if (!(e instanceof ConflictError)) throw e;
+    }
+  }
+  throw new Error("timeline_busy");
+}
+
+/** Ajoute un son sur la piste audio, à partir du début (musique) ou après le dernier son (voix). */
+export async function appendAudio(projectId: string, node: CanvasNode) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const tl = await data.timeline(projectId);
+    const audio = tl.audio ?? [];
+    const kind = node.data.action === "generate_music" ? ("music" as const) : ("voice" as const);
+    const afterLastVoice = audio.filter((a) => a.kind === "voice").reduce((m, a) => Math.max(m, a.startMs + a.durationMs), 0);
+    const startMs = kind === "music" ? 0 : Math.min(afterLastVoice, Math.max(0, totalMs(tl) - 500));
+    const clip = { id: crypto.randomUUID(), nodeId: node.id, kind, startMs, durationMs: node.data.durationMs ?? 3000, volume: kind === "music" ? 0.6 : 1 };
+    try {
+      return await data.saveTimeline({ ...tl, audio: [...audio, clip] });
     } catch (e) {
       if (!(e instanceof ConflictError)) throw e;
     }

@@ -24,6 +24,8 @@ export interface Project {
   styleId: string | null;
   visibility: "private" | "shared";
   thumbnailUrl: string | null;
+  linkAccess: "none" | "view" | "edit";
+  invites: { email: string; access: "view" | "edit" }[];
   /** Premier prompt saisi sur l'accueil, consommé par le premier tour de l'agent. */
   pendingPrompt: string | null;
   createdAt: string;
@@ -42,7 +44,7 @@ export interface Section {
   h: number;
 }
 
-export type NodeType = "text" | "image" | "video" | "generator";
+export type NodeType = "text" | "image" | "video" | "audio" | "generator";
 export type GenStatus = "idle" | "running" | "done" | "failed";
 
 export interface CanvasNode {
@@ -57,7 +59,9 @@ export interface CanvasNode {
   data: {
     prompt?: string;
     model?: string;
-    action?: "generate_image" | "generate_video";
+    action?: "generate_image" | "generate_video" | "generate_voice" | "generate_music" | "character_ref";
+    /** Voix choisie (generate_voice). */
+    voice?: string;
     status?: GenStatus;
     mediaUrl?: string;
     posterUrl?: string;
@@ -69,7 +73,7 @@ export interface CanvasNode {
   };
 }
 
-export type EdgeRole = "prompt" | "start_frame" | "end_frame" | "character_ref" | "source";
+export type EdgeRole = "prompt" | "start_frame" | "end_frame" | "character_ref" | "scene_ref" | "source";
 
 export interface CanvasEdge {
   id: string;
@@ -88,7 +92,7 @@ export interface Conversation {
 
 export type ContentBlock =
   | { type: "text"; text: string }
-  | { type: "asset"; nodeId: string; kind: "image" | "video" | "section"; label: string }
+  | { type: "asset"; nodeId: string; kind: "image" | "video" | "audio" | "section"; label: string }
   | { type: "button"; action: "topup" | "open_editor"; label: string };
 
 export interface ActionRecord {
@@ -117,7 +121,7 @@ export interface CanvasState {
 }
 
 export interface QuoteItem {
-  kind: "image" | "video";
+  kind: "image" | "video" | "voice" | "music" | "character";
   model: string;
 }
 
@@ -144,11 +148,22 @@ export interface TextClip {
   durationMs: number;
 }
 
+export interface AudioClip {
+  id: string;
+  nodeId: string;
+  kind: "music" | "voice";
+  startMs: number;
+  durationMs: number;
+  volume: number;
+}
+
 export interface Timeline {
   projectId: string;
   fps: 24 | 25 | 30;
   main: TimelineClip[];
   text: TextClip[];
+  /** Piste musique / voix (facultative pour les timelines créées avant l'audio). */
+  audio?: AudioClip[];
   /** Verrou optimiste : l'agent et l'humain ne s'écrasent pas. */
   version: number;
 }

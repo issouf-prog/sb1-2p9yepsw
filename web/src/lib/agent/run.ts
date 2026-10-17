@@ -3,11 +3,13 @@
 // avec appels d'outils, exécutée côté serveur ; executeTool() et les règles restent.
 
 import { data, InsufficientCreditsError, type ActionRecord, type CanvasNode, type ChatMessage, type ContentBlock, type Section } from "../data";
-import { DEFAULT_MODEL } from "../data/prices";
+import { DEFAULT_MODEL, musicDurationMs, VOICES } from "../data/prices";
 import { gen } from "../gen";
 import { sectionSize, slot } from "../canvas";
 import { storyFromIdea } from "../story";
-import { buildTimeline } from "./tools";
+import { buildTimeline, appendAudio } from "./tools";
+import { mediaSize } from "../canvas";
+import { titleFrom } from "../data/fake";
 
 interface TurnInput {
   projectId: string;
@@ -76,6 +78,104 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
         ]),
         { type: "button", action: "open_editor", label: "Ouvrir le montage" },
       );
+    }
+    return;
+  }
+
+  /** Débite un lot entier ou explique pourquoi rien n'est lancé. */
+  const charge = async (items: { kind: "image" | "video" | "voice" | "music" | "character"; model: string }[], label: string) => {
+    const qa = await act("quote", "Estimer le coût");
+    const total = await data.quote(items);
+    await finish(qa, "done");
+    const launch = await act("spend", label);
+    try {
+      await data.spend(total, `batch:${reply.id}:${label}`);
+      await finish(launch, "done");
+      return { ok: true as const, total, key: `batch:${reply.id}:${label}` };
+    } catch (e) {
+      if (!(e instanceof InsufficientCreditsError)) throw e;
+      await finish(launch, "failed", `Il manque ${e.needed - e.available} crédits (${e.needed} nécessaires, ${e.available} disponibles). Rien n'a été lancé ni débité.`);
+      await say({ type: "text", text: "Je n'ai rien lancé. Rechargez vos crédits et redemandez-moi." });
+      return { ok: false as const };
+    }
+  };
+  /** Point libre à droite de tout le contenu de la toile. */
+  const freeSpot = () => {
+    const right = Math.max(80, ...canvas.sections.map((s) => s.x + s.w + 80), ...canvas.nodes.filter((n) => !n.sectionId).map((n) => n.x + 400));
+    return { x: right, y: 80 };
+  };
+
+  const wantsMusic = /musique|bande[- ]son|ambiance sonore/.test(lower);
+  const wantsVoice = /\bvoix\b|narrat|voice[- ]?over|\bdis\b|\bdit\b|réplique/.test(lower);
+  const wantsCharacter = /personnage|fiche perso/.test(lower);
+
+  if (wantsMusic || wantsVoice) {
+    const isMusic = wantsMusic;
+    const model = isMusic ? DEFAULT_MODEL.music : DEFAULT_MODEL.voice;
+    const quoted = text.match(/[«"“]\s*([^»"”]+?)\s*[»"”]/)?.[1] ?? text.split(":").slice(1).join(":").trim();
+    const content = isMusic ? text : quoted || "Il était une fois, au bout de la rue, une histoire qui commençait.";
+    const voice = VOICES.find((v) => lower.includes(v.label.toLowerCase()))?.id ?? "claire";
+    const c = await charge([{ kind: isMusic ? "music" : "voice", model }], isMusic ? "Composer la musique" : "Enregistrer la voix");
+    if (!c.ok) return;
+    const spot = freeSpot();
+    const node: CanvasNode = {
+      id: crypto.randomUUID(), projectId, sectionId: null, type: "generator", name: isMusic ? "Musique" : "Voix off", ...spot,
+      data: { action: isMusic ? "generate_music" : "generate_voice", prompt: content, model, voice: isMusic ? undefined : voice, status: "running" },
+    };
+    await data.upsertNode(node);
+    const a = await act(isMusic ? "generate_music" : "generate_voice", isMusic ? "Générer la musique" : "Générer la voix");
+    try {
+      const r = isMusic ? await gen.music({ prompt: content, model, durationMs: musicDurationMs(model) }) : await gen.voice({ text: content, voice, model });
+      const done: CanvasNode = { ...node, type: "audio", name: isMusic ? `Musique — ${titleFrom(content).slice(0, 24)}` : `Voix — ${VOICES.find((v) => v.id === voice)!.label}`, data: { ...node.data, status: "done", mediaUrl: r.url, durationMs: r.durationMs } };
+      await data.upsertNode(done);
+      await finish(a, "done");
+      const t = await act("edit_timeline", "Placer le son dans le montage");
+      await appendAudio(projectId, done);
+      await finish(t, "done");
+      await say(
+        { type: "text", text: isMusic ? "Voici la musique " : "Voici la voix off " },
+        { type: "asset", nodeId: done.id, kind: "audio", label: done.name },
+        { type: "text", text: ` (${(r.durationMs / 1000).toFixed(1)} s), déjà placée sur la piste son du montage.` },
+        { type: "button", action: "open_editor", label: "Écouter dans le montage" },
+      );
+    } catch {
+      await data.refund(c.total, c.key);
+      await data.upsertNode({ ...node, data: { ...node.data, status: "failed", error: "Le son n'a pas pu être généré. Crédits rendus." } });
+      await finish(a, "failed", "Le son n'a pas pu être généré. Vos crédits ont été rendus.");
+    }
+    return;
+  }
+
+  if (wantsCharacter) {
+    const desc = text.replace(/.*?personnage\s*(principal)?\s*:?\s*/i, "").trim() || text;
+    const c = await charge([{ kind: "image", model: DEFAULT_MODEL.image }], "Créer la fiche personnage");
+    if (!c.ok) return;
+    let section = canvas.sections.find((s) => s.name === "Personnages");
+    if (!section) {
+      const spot = freeSpot();
+      const { w, h } = mediaSize(project.aspectRatio);
+      section = { id: crypto.randomUUID(), projectId, name: "Personnages", locked: false, collapsed: false, x: spot.x, y: spot.y, w: 3 * (w + 40) + 40, h: 64 + h + 160 };
+      await data.upsertSection(section);
+    }
+    const count = canvas.nodes.filter((n) => n.sectionId === section!.id).length;
+    const node: CanvasNode = {
+      id: crypto.randomUUID(), projectId, sectionId: section.id, type: "generator", name: `Fiche — ${titleFrom(desc).slice(0, 28)}`,
+      ...slot(project.aspectRatio, count), data: { action: "generate_image", prompt: `Fiche personnage, trois vues (face, profil, dos) : ${desc}`, model: DEFAULT_MODEL.image, status: "running" },
+    };
+    await data.upsertNode(node);
+    const a = await act("generate_image", "Dessiner la fiche en trois vues");
+    try {
+      const r = await gen.image({ prompt: node.data.prompt!, model: node.data.model!, aspectRatio: project.aspectRatio });
+      await data.upsertNode({ ...node, type: "image", data: { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
+      await finish(a, "done");
+      await say(
+        { type: "text", text: "La fiche est prête : " },
+        { type: "asset", nodeId: node.id, kind: "image", label: node.name },
+        { type: "text", text: ". Sélectionnez-la puis « Personnage de référence » pour la placer dans n'importe quelle scène en gardant son apparence." },
+      );
+    } catch {
+      await data.refund(c.total, c.key);
+      await finish(a, "failed", "La fiche n'a pas pu être générée. Vos crédits ont été rendus.");
     }
     return;
   }

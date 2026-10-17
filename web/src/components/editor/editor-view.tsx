@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Play, Pause, ZoomIn, ZoomOut, Scissors, Trash2, Upload, Plus, ChevronDown, Sparkles, ArrowLeft, ArrowRight, Type, Maximize2, Heart,
+  Play, Pause, ZoomIn, ZoomOut, Scissors, Trash2, Upload, Sparkles, ArrowLeft, ArrowRight, Type, Maximize2,
 } from "lucide-react";
-import { data, ConflictError, type CanvasNode, type Project, type Timeline, type TimelineClip } from "@/lib/data";
+import { data, ConflictError, type AudioClip, type CanvasNode, type Project, type Timeline, type TimelineClip } from "@/lib/data";
 import { useLive } from "@/hooks/use-live";
 import { buildTimeline } from "@/lib/agent/tools";
 import { clipAt, defaultDuration, move, splitAt, starts, timecode, totalMs, MIN_CLIP_MS } from "@/lib/timeline";
@@ -12,10 +12,13 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { ExportDialog } from "./export-dialog";
+import { ResourceList } from "@/components/app/resource-list";
+import { useApp } from "@/components/app/app-context";
 
 const TABS = ["Ressources", "Sons", "Effets", "Transitions"] as const;
 
 export function EditorView({ project }: { project: Project }) {
+  const { ask } = useApp();
   const canvas = useLive(() => data.canvas(project.id), [project.id], project.id);
   const remote = useLive(() => data.timeline(project.id), [project.id], project.id);
   const [tl, setTl] = useState<Timeline | null>(null);
@@ -23,7 +26,6 @@ export function EditorView({ project }: { project: Project }) {
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [pxPerSec, setPxPerSec] = useState(80);
-  const [filter, setFilter] = useState<"all" | "fav">("all");
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -32,13 +34,14 @@ export function EditorView({ project }: { project: Project }) {
   useEffect(() => { if (remote.value) setTl(remote.value); }, [remote.value]);
 
   const nodes = useMemo(() => new Map((canvas.value?.nodes ?? []).map((n) => [n.id, n])), [canvas.value]);
-  const media = (canvas.value?.nodes ?? []).filter((n) => (n.type === "image" || n.type === "video") && n.data.mediaUrl && (filter === "all" || n.data.favorite));
   const sections = canvas.value?.sections ?? [];
+  const audioClips: AudioClip[] = useMemo(() => tl?.audio ?? [], [tl?.audio]);
+  const audioEls = useRef(new Map<string, HTMLAudioElement>());
   const total = tl ? totalMs(tl) : 0;
 
-  const commit = useCallback(async (main: TimelineClip[], text = tl?.text ?? []) => {
+  const commit = useCallback(async (main: TimelineClip[], text = tl?.text ?? [], audio = tl?.audio ?? []) => {
     if (!tl) return;
-    const optimistic = { ...tl, main, text };
+    const optimistic = { ...tl, main, text, audio };
     setTl(optimistic);
     try {
       setTl(await data.saveTimeline(optimistic));
@@ -70,7 +73,29 @@ export function EditorView({ project }: { project: Project }) {
 
   useEffect(() => { if (playhead > total) setPlayhead(total); }, [total, playhead]);
 
-  const add = (n: CanvasNode) => tl && commit([...tl.main, { id: crypto.randomUUID(), nodeId: n.id, durationMs: defaultDuration(n) }]);
+  const add = (n: CanvasNode) => {
+    if (!tl) return;
+    if (n.type === "audio") {
+      const kind = n.data.action === "generate_music" ? ("music" as const) : ("voice" as const);
+      return commit(tl.main, tl.text, [...audioClips, { id: crypto.randomUUID(), nodeId: n.id, kind, startMs: kind === "music" ? 0 : Math.min(playhead, Math.max(0, total - 500)), durationMs: n.data.durationMs ?? 3000, volume: kind === "music" ? 0.6 : 1 }]);
+    }
+    return commit([...tl.main, { id: crypto.randomUUID(), nodeId: n.id, durationMs: defaultDuration(n) }]);
+  };
+
+  // Son synchronisé avec la tête de lecture.
+  useEffect(() => {
+    for (const c of audioClips) {
+      const el = audioEls.current.get(c.id);
+      if (!el) continue;
+      const inside = playhead >= c.startMs && playhead < c.startMs + c.durationMs;
+      el.volume = c.volume;
+      if (playing && inside) {
+        const want = (playhead - c.startMs) / 1000;
+        if (Math.abs(el.currentTime - want) > 0.3) el.currentTime = want;
+        if (el.paused) el.play().catch(() => {});
+      } else if (!el.paused) el.pause();
+    }
+  }, [playhead, playing, audioClips]);
   const remove = (id: string) => tl && (commit(tl.main.filter((c) => c.id !== id)), setSelected(null));
   const split = () => tl && commit(splitAt(tl.main, playhead));
   const sel = tl?.main.find((c) => c.id === selected) ?? null;
@@ -102,8 +127,6 @@ export function EditorView({ project }: { project: Project }) {
   const current = hit ? nodes.get(hit.clip.nodeId) : null;
   const s = starts(tl.main);
   const width = Math.max(800, (total / 1000) * pxPerSec + 200);
-  const groups = [...sections.map((sec) => ({ id: sec.id, name: sec.name, items: media.filter((n) => n.sectionId === sec.id) })),
-    { id: "none", name: "Non groupés", items: media.filter((n) => !n.sectionId || !sections.some((x) => x.id === n.sectionId)) }].filter((g) => g.items.length);
 
   return (
     <div className="flex h-full flex-col bg-surface" onKeyDown={onKey}>
@@ -116,30 +139,7 @@ export function EditorView({ project }: { project: Project }) {
                 className={cn("py-3 text-nav uppercase", i === 0 ? "text-text" : "text-text-subtle")}>{t}</button>
             ))}
           </div>
-          <div className="flex gap-4 border-b border-border px-5 py-2 text-base">
-            <button onClick={() => setFilter("all")} aria-pressed={filter === "all"} className={filter === "all" ? "text-text" : "text-text-muted"}>Tout {(canvas.value?.nodes ?? []).filter((n) => n.data.mediaUrl).length}</button>
-            <button onClick={() => setFilter("fav")} aria-pressed={filter === "fav"} className={filter === "fav" ? "text-text" : "text-text-muted"}>Favoris {(canvas.value?.nodes ?? []).filter((n) => n.data.favorite).length}</button>
-          </div>
-          <div className="flex-1 overflow-y-auto py-2">
-            {groups.length === 0 && <p className="px-5 py-6 text-sm text-text-muted">{filter === "fav" ? "Aucun favori. Ajoutez-en depuis la toile (cœur)." : "Aucun plan généré pour l'instant."}</p>}
-            {groups.map((g) => (
-              <div key={g.id} className="mb-2">
-                <p className="flex items-center gap-2 px-5 py-2 text-base text-text-muted"><ChevronDown aria-hidden className="size-4" /><span className="truncate" title={g.name}>{g.name}</span><span className="ml-auto">{g.items.length}</span></p>
-                <ul>
-                  {g.items.map((n) => (
-                    <li key={n.id} className="group flex items-center gap-3 px-5 py-1.5 hover:bg-surface-sunken">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={n.data.posterUrl ?? n.data.mediaUrl} alt="" className="size-12 shrink-0 object-cover" />
-                      <span className="min-w-0 flex-1 truncate" title={n.name}>{n.name}</span>
-                      {n.data.favorite && <Heart aria-label="Favori" className="size-4 fill-current text-text-muted" />}
-                      {n.type === "video" && <span className="text-sm text-text-muted">{((n.data.durationMs ?? 0) / 1000).toFixed(0)} s</span>}
-                      <IconButton label={`Ajouter ${n.name} au montage`} className="size-8" icon={<Plus className="size-4" />} onClick={() => add(n)} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <ResourceList nodes={canvas.value?.nodes ?? []} sections={sections} onAdd={add} />
         </section>
 
         {/* Aperçu */}
@@ -203,12 +203,12 @@ export function EditorView({ project }: { project: Project }) {
         <IconButton label="Retirer le clip sélectionné" shortcut="Suppr" disabled={!selected} icon={<Trash2 className="size-5" />} onClick={() => selected && remove(selected)} />
         <IconButton label="Ajouter un texte" shortcut="T" disabled={!total}
           icon={<Type className="size-5" />}
-          onClick={() => { const t = window.prompt("Texte à afficher"); if (t?.trim()) commit(tl.main, [...tl.text, { id: crypto.randomUUID(), text: t.trim(), startMs: playhead, durationMs: 2500 }]); }} />
+          onClick={async () => { const t = await ask({ title: "Ajouter un texte", label: "Texte affiché à la tête de lecture (2,5 s)", confirm: "Ajouter", multiline: true }); if (t) commit(tl.main, [...tl.text, { id: crypto.randomUUID(), text: t, startMs: playhead, durationMs: 2500 }]); }} />
         <Button size="sm" variant="secondary" className="ml-2" disabled={!total} onClick={() => setExporting(true)}><Upload aria-hidden className="size-4" />Exporter</Button>
       </div>
 
       {/* Timeline */}
-      <div className="h-44 overflow-x-auto" aria-label="Timeline">
+      <div className="h-52 overflow-x-auto" aria-label="Timeline">
         <div style={{ width }} className="relative h-full">
           <div className="relative h-7 cursor-pointer border-b border-border"
             onPointerDown={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPlayhead(Math.max(0, Math.min(total, ((e.clientX - r.left - 96) / pxPerSec) * 1000))); }}>
@@ -250,6 +250,23 @@ export function EditorView({ project }: { project: Project }) {
               ))}
             </div>
           </div>
+          <div className="flex h-10 items-center">
+            <span className="w-24 shrink-0 px-3 text-sm text-text-muted">Son</span>
+            <div className="relative h-7 flex-1">
+              {audioClips.map((c) => {
+                const n = nodes.get(c.nodeId);
+                return (
+                  <button key={c.id} title={`${n?.name ?? "Son"} · ${(c.durationMs / 1000).toFixed(1)} s · double-clic pour retirer`}
+                    onClick={() => setPlayhead(c.startMs)}
+                    onDoubleClick={() => commit(tl.main, tl.text, audioClips.filter((x) => x.id !== c.id))}
+                    style={{ left: (c.startMs / 1000) * pxPerSec, width: (c.durationMs / 1000) * pxPerSec }}
+                    className={cn("absolute h-full truncate px-1 text-left text-xs", c.kind === "music" ? "bg-section" : "bg-surface-sunken")}>
+                    {c.kind === "music" ? "♪ " : ""}{n?.name ?? "Son"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div aria-hidden className="pointer-events-none absolute top-0 h-full w-px bg-accent" style={{ left: 96 + (playhead / 1000) * pxPerSec }}>
             <span className="absolute -left-1.5 top-0 size-3 rounded-pill bg-accent" />
           </div>
@@ -261,6 +278,12 @@ export function EditorView({ project }: { project: Project }) {
           <span>{notice}</span><button onClick={() => setNotice(null)} className="text-sm text-text-muted underline">Fermer</button>
         </div>
       )}
+      {audioClips.map((c) => {
+        const n = nodes.get(c.nodeId);
+        return n?.data.mediaUrl ? (
+          <audio key={c.id} src={n.data.mediaUrl} preload="auto" ref={(el) => { if (el) audioEls.current.set(c.id, el); else audioEls.current.delete(c.id); }} />
+        ) : null;
+      })}
       <ExportDialog open={exporting} onOpenChange={setExporting} project={project} timeline={tl} nodes={nodes} />
     </div>
   );

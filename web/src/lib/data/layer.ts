@@ -15,7 +15,7 @@ export interface DataLayer {
   listProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | null>;
   createProject(input: { name?: string; aspectRatio: AspectRatio; prompt?: string }): Promise<Project>;
-  updateProject(id: string, patch: Partial<Pick<Project, "name" | "aspectRatio" | "thumbnailUrl" | "pendingPrompt">>): Promise<Project>;
+  updateProject(id: string, patch: Partial<Pick<Project, "name" | "aspectRatio" | "thumbnailUrl" | "pendingPrompt" | "visibility" | "linkAccess" | "invites">>): Promise<Project>;
   deleteProject(id: string): Promise<void>;
 
   canvas(projectId: string): Promise<CanvasState>;

@@ -5,7 +5,9 @@ import type { AspectRatio, CanvasNode } from "@/lib/data";
 
 export interface CanvasActions {
   ratio: AspectRatio;
-  runGenerator(node: CanvasNode, patch: { prompt: string; model: string }): Promise<void>;
+  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string }): Promise<void>;
+  characterFrom(node: CanvasNode): Promise<void>;
+  rename(node: CanvasNode): Promise<void>;
   animate(node: CanvasNode): Promise<void>;
   regenerate(node: CanvasNode): Promise<void>;
   update(node: CanvasNode): Promise<void>;

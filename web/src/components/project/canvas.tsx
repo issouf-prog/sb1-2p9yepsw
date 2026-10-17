@@ -8,13 +8,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote, BoxSelect,
+  Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote, BoxSelect, X,
 } from "lucide-react";
 import { data, InsufficientCreditsError, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
-import { DEFAULT_MODEL, priceOf } from "@/lib/data/prices";
+import { DEFAULT_MODEL, priceOf, musicDurationMs, type ModelKind } from "@/lib/data/prices";
 import { gen } from "@/lib/gen";
 import { mediaSize, GAP, SECTION_HEADER, CAPTION } from "@/lib/canvas";
-import { appendToTimeline } from "@/lib/agent/tools";
+import { appendToTimeline, appendAudio } from "@/lib/agent/tools";
 import { titleFrom } from "@/lib/data/fake";
 import { IconButton } from "@/components/ui/icon-button";
 import { VerticalToolbar, ToolbarDivider } from "@/components/ui/canvas-bits";
@@ -23,6 +23,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { useApp } from "@/components/app/app-context";
 import { CanvasActionsContext, type CanvasActions } from "./canvas-actions";
 import { SectionNode, MediaNode, NoteNode } from "./nodes";
+import { ResourceList } from "@/components/app/resource-list";
 
 const nodeTypes = { section: SectionNode, media: MediaNode, note: NoteNode };
 
@@ -53,7 +54,7 @@ function toEdges(state: CanvasState): Edge[] {
 }
 
 export function Canvas({ project, state, onSelectionChange }: { project: Project; state: CanvasState; onSelectionChange: (ids: string[]) => void }) {
-  const { openTopUp } = useApp();
+  const { openTopUp, ask } = useApp();
   const router = useRouter();
   const flow = useReactFlow();
   const { zoom } = useViewport();
@@ -63,6 +64,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   const [hand, setHand] = useState(false);
   const [preview, setPreview] = useState<CanvasNode | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showResources, setShowResources] = useState(false);
 
   useEffect(() => {
     setNodes(toFlow(state, selected));
@@ -87,15 +89,28 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
     return flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2 - 120, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 - 160 });
   };
 
-  const addGenerator = async (action: "generate_image" | "generate_video", from?: CanvasNode) => {
+  type GenAction = NonNullable<CanvasNode["data"]["action"]>;
+  const GEN_META: Record<GenAction, { name: string; kind: ModelKind }> = {
+    generate_image: { name: "Nouvelle image", kind: "image" },
+    generate_video: { name: "Image vers vidéo", kind: "video" },
+    character_ref: { name: "Personnage dans une scène", kind: "character" },
+    generate_voice: { name: "Nouvelle voix", kind: "voice" },
+    generate_music: { name: "Nouvelle musique", kind: "music" },
+  };
+
+  const addGenerator = async (action: GenAction, from?: CanvasNode) => {
     const p = from ? { x: from.x + mediaSize(project.aspectRatio).w + 80, y: from.y } : centerPoint();
+    const meta = GEN_META[action];
     const node: CanvasNode = {
       id: crypto.randomUUID(), projectId: project.id, sectionId: from?.sectionId ?? null, type: "generator",
-      name: action === "generate_image" ? "Nouvelle image" : "Image vers vidéo", x: p.x, y: p.y,
-      data: { action, model: action === "generate_image" ? DEFAULT_MODEL.image : DEFAULT_MODEL.video, status: "idle" },
+      name: meta.name, x: p.x, y: p.y,
+      data: { action, model: DEFAULT_MODEL[meta.kind], status: "idle" },
     };
     await data.upsertNode(node);
-    if (from) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role: "start_frame" });
+    if (from) {
+      const role = action === "character_ref" ? "character_ref" : "start_frame";
+      await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role });
+    }
     setNodes((ns) => ns.map((n) => ({ ...n, selected: false })));
     setTimeout(() => setNodes((ns) => ns.map((n) => (n.id === node.id ? { ...n, selected: true } : n))), 0);
     return node;
@@ -103,8 +118,9 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   const actions: CanvasActions = {
     ratio: project.aspectRatio,
-    async runGenerator(node, { prompt, model }) {
-      const kind = node.data.action === "generate_video" ? "video" : "image";
+    async runGenerator(node, { prompt, model, voice }) {
+      const action = node.data.action ?? "generate_image";
+      const kind = GEN_META[action].kind;
       const key = `gen:${node.id}:${Date.now()}`;
       const cost = priceOf(kind, model);
       try {
@@ -117,27 +133,46 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
         }
         throw e;
       }
-      const running = { ...node, data: { ...node.data, prompt, model, status: "running" as const, error: undefined } };
+      const running = { ...node, data: { ...node.data, prompt, model, voice, status: "running" as const, error: undefined } };
       await data.upsertNode(running);
+      const sources = (role: string) => state.edges.filter((e) => e.to === node.id && e.role === role).map((e) => byId.get(e.from)).filter((n): n is CanvasNode => !!n?.data.mediaUrl);
       try {
-        if (kind === "image") {
-          const r = await gen.image({ prompt, model, aspectRatio: project.aspectRatio });
+        if (kind === "image" || kind === "character") {
+          const r = kind === "image"
+            ? await gen.image({ prompt, model, aspectRatio: project.aspectRatio })
+            : await (async () => {
+                const refs = sources("character_ref");
+                if (!refs.length) throw new Error("no_reference");
+                return gen.character({ prompt, model, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })) });
+              })();
           await data.upsertNode({ ...running, type: "image", data: { ...running.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
           if (!project.thumbnailUrl) await data.updateProject(project.id, { thumbnailUrl: r.url });
-        } else {
-          const src = state.edges.find((e) => e.to === node.id && e.role === "start_frame");
-          const frame = src && byId.get(src.from)?.data.mediaUrl;
+        } else if (kind === "video") {
+          const frame = sources("start_frame")[0]?.data.mediaUrl;
           if (!frame) throw new Error("no_start_frame");
           const r = await gen.video({ prompt, model, startFrameUrl: frame, aspectRatio: project.aspectRatio });
           await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: r.width, height: r.height, durationMs: r.durationMs } });
+        } else {
+          const r = kind === "voice"
+            ? await gen.voice({ text: prompt, voice: voice ?? "claire", model })
+            : await gen.music({ prompt, model, durationMs: musicDurationMs(model) });
+          await data.upsertNode({ ...running, type: "audio", name: running.name.startsWith("Nouvelle") ? titleFrom(prompt).slice(0, 32) : running.name, data: { ...running.data, status: "done", mediaUrl: r.url, durationMs: r.durationMs } });
         }
       } catch (err) {
         await data.refund(cost, key);
-        const msg = err instanceof Error && err.message === "no_start_frame"
-          ? "Reliez une image de départ à ce nœud. Crédits rendus."
+        const code = err instanceof Error ? err.message : "";
+        const msg = code === "no_start_frame" ? "Reliez une image de départ à ce nœud. Crédits rendus."
+          : code === "no_reference" ? "Reliez une image du personnage à ce nœud. Crédits rendus."
           : "La génération n'a pas abouti. Vos crédits ont été rendus.";
         await data.upsertNode({ ...running, data: { ...running.data, status: "failed", error: msg } });
       }
+    },
+    async characterFrom(node) {
+      await addGenerator("character_ref", node);
+    },
+    async rename(node) {
+      const name = await ask({ title: "Renommer", label: "Nom du plan", initial: node.name, confirm: "Renommer" });
+      if (name) await data.upsertNode({ ...node, name });
     },
     async animate(node) {
       await addGenerator("generate_video", node);
@@ -160,7 +195,8 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       await data.deleteSection(id);
     },
     async sendToEditor(node) {
-      await appendToTimeline(project.id, node);
+      if (node.type === "audio") await appendAudio(project.id, node);
+      else await appendToTimeline(project.id, node);
       setNotice(`« ${node.name} » ajouté à la fin du montage.`);
     },
     preview: setPreview,
@@ -283,8 +319,8 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
                     <MenuItem disabled>Sélectionnez une image puis « Animer cette image »</MenuItem>
                   </MenuSubContent>
                 </MenuSub>
-                <MenuItem icon={<Mic />} disabled>Générer une voix (bientôt)</MenuItem>
-                <MenuItem icon={<Music />} disabled>Générer de la musique (bientôt)</MenuItem>
+                <MenuItem icon={<Mic />} onSelect={() => addGenerator("generate_voice")}>Générer une voix</MenuItem>
+                <MenuItem icon={<Music />} onSelect={() => addGenerator("generate_music")}>Générer de la musique</MenuItem>
               </MenuContent>
             </Menu>
             <IconButton label="Sélection" shortcut="V" active={!hand} onClick={() => setHand(false)} icon={<MousePointer2 className="size-5" />} />
@@ -292,7 +328,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
             <IconButton label={selected.size ? "Grouper dans une section" : "Nouvelle section"} shortcut="S" onClick={createSection} icon={<BoxSelect className="size-5" />} />
             <IconButton label="Note" shortcut="T" onClick={addNote} icon={<Type className="size-5" />} />
             <ToolbarDivider />
-            <IconButton label="Ressources (bientôt)" aria-disabled icon={<Images className="size-5" />} />
+            <IconButton label="Ressources" active={showResources} onClick={() => setShowResources((v) => !v)} icon={<Images className="size-5" />} />
             <IconButton label="Histoire" onClick={() => router.push(`/p/${project.id}?view=story`)} icon={<FileText className="size-5" />} />
             <IconButton label="Montage" onClick={() => router.push(`/p/${project.id}?view=editor`)} icon={<Clapperboard className="size-5" />} />
             <ToolbarDivider />
@@ -300,6 +336,22 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
             <IconButton label="Réglages (bientôt)" aria-disabled icon={<Settings className="size-5" />} />
           </VerticalToolbar>
         </div>
+
+        {showResources && (
+          <div className="absolute left-20 top-4 z-20 flex max-h-[calc(100%-2rem)] w-96 flex-col border border-text bg-surface shadow-pop">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2">
+              <h2 className="text-lg">Ressources</h2>
+              <IconButton label="Fermer les ressources" className="size-8" icon={<X className="size-4" />} onClick={() => setShowResources(false)} />
+            </div>
+            <ResourceList nodes={state.nodes} sections={state.sections} selected={selected}
+              onPick={(n) => {
+                setNodes((ns) => ns.map((x) => ({ ...x, selected: x.id === n.id })));
+                const abs = flow.getInternalNode(n.id)?.internals.positionAbsolute;
+                if (abs) flow.setCenter(abs.x + 150, abs.y + 150, { zoom: 0.9, duration: 300 });
+              }}
+              onLocateSection={(id) => { const s = state.sections.find((x) => x.id === id); if (s) flow.fitBounds({ x: s.x, y: s.y - 60, width: s.w, height: s.h + 60 }, { duration: 300, padding: 0.2 }); }} />
+          </div>
+        )}
 
         {empty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">

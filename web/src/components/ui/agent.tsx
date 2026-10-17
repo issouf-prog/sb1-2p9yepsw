@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Loader2, ChevronRight, Image as ImageIcon, Play, LayoutGrid } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, ChevronRight, Image as ImageIcon, Play, LayoutGrid, AudioLines } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "./button";
@@ -29,8 +29,8 @@ export function ActionCard({ label, status, detail, action }: { label: string; s
 }
 
 /** Référence inline à un nœud ou une section : cliquer sélectionne le nœud sur la toile. */
-export function AssetChip({ kind, label, onClick }: { kind: "image" | "video" | "section"; label: string; onClick?: () => void }) {
-  const Icon = kind === "image" ? ImageIcon : kind === "video" ? Play : LayoutGrid;
+export function AssetChip({ kind, label, onClick }: { kind: "image" | "video" | "audio" | "section"; label: string; onClick?: () => void }) {
+  const Icon = kind === "image" ? ImageIcon : kind === "video" ? Play : kind === "audio" ? AudioLines : LayoutGrid;
   return (
     <button
       onClick={onClick}

@@ -86,7 +86,7 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
     return <Button key={i} variant="secondary" size="sm" className="mt-2" onClick={b.action === "topup" ? openTopUp : () => router.push(`/p/${projectId}?view=editor`)}>{b.label}</Button>;
   };
 
-  const selectedNodes = nodes.filter((n) => selection.includes(n.id) && n.data.mediaUrl);
+  const selectedNodes = nodes.filter((n) => selection.includes(n.id) && n.data.mediaUrl && (n.type === "image" || n.type === "video"));
 
   if (collapsed) {
     return (

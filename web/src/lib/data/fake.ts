@@ -89,7 +89,9 @@ export const fakeData: DataLayer = {
     return clone(load().projects).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   },
   async getProject(id) {
-    return clone(load().projects.find((p) => p.id === id) ?? null);
+    const p = load().projects.find((x) => x.id === id);
+    // Projets créés avant le partage : valeurs par défaut.
+    return p ? clone({ ...p, linkAccess: p.linkAccess ?? "none", invites: p.invites ?? [] }) : null;
   },
   async createProject({ name, aspectRatio, prompt }) {
     const db = load();
@@ -101,6 +103,8 @@ export const fakeData: DataLayer = {
       styleId: null,
       visibility: "private",
       thumbnailUrl: null,
+      linkAccess: "none",
+      invites: [],
       pendingPrompt: prompt?.trim() || null,
       createdAt: now(),
       updatedAt: now(),

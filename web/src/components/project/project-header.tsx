@@ -8,6 +8,7 @@ import { Brand } from "@/components/app/brand";
 import { AccountCluster } from "@/components/app/account-cluster";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { ShareDialog } from "./share-dialog";
 
 export const VIEWS = [
   { id: "story", label: "Histoire" },
@@ -19,6 +20,7 @@ export type View = (typeof VIEWS)[number]["id"];
 
 export function ProjectHeader({ project, view }: { project: Project; view: View }) {
   const [editing, setEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [name, setName] = useState(project.name);
   const save = async () => {
     setEditing(false);
@@ -55,9 +57,10 @@ export function ProjectHeader({ project, view }: { project: Project; view: View 
       </nav>
       <div className="ml-auto md:ml-0">
         <AccountCluster>
-          <span className="hidden sm:block"><Button variant="secondary" size="sm" title="Partage : bientôt">Partager</Button></span>
+          <span className="hidden sm:block"><Button variant="secondary" size="sm" onClick={() => setSharing(true)}>Partager</Button></span>
         </AccountCluster>
       </div>
+      <ShareDialog project={project} open={sharing} onOpenChange={setSharing} />
     </header>
   );
 }

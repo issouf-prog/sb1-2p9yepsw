@@ -12,6 +12,7 @@ import { Chip } from "@/components/ui/chip";
 import { ActionCard, AssetChip, UserMessage, AgentMessage } from "@/components/ui/agent";
 import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { fileToNode } from "@/lib/upload";
+import { recoverInterrupted } from "@/lib/agent/recovery";
 import { Button } from "@/components/ui/button";
 import { Menu, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { useApp } from "@/components/app/app-context";
@@ -91,11 +92,11 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
     }
   };
 
-  // Premier tour automatique avec le prompt saisi sur l'accueil.
+  // Premier tour automatique avec le prompt saisi sur l'accueil (après nettoyage d'un travail interrompu).
   useEffect(() => {
     if (started.has(projectId)) return;
     started.add(projectId);
-    data.getProject(projectId).then(async (p) => {
+    recoverInterrupted(projectId).then(() => data.getProject(projectId)).then(async (p) => {
       if (!p?.pendingPrompt) return;
       const prompt = p.pendingPrompt;
       await data.updateProject(projectId, { pendingPrompt: null });

@@ -18,6 +18,7 @@ import { mentionedNodes } from "@/components/ui/mention-textarea";
 import { fileToNode } from "@/lib/upload";
 import { useLive } from "@/hooks/use-live";
 import { StylePicker } from "./style-picker";
+import { beginWork, pending } from "@/lib/agent/recovery";
 import { gen } from "@/lib/gen";
 import { mediaSize, GAP, SECTION_HEADER, CAPTION } from "@/lib/canvas";
 import { appendToTimeline, appendAudio } from "@/lib/agent/tools";
@@ -200,6 +201,8 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       const visual = kind === "image" || kind === "video" || kind === "character" || kind === "edit";
       const styled = visual ? applyStyle(prompt, style) : prompt;
       const running = { ...node, data: { ...node.data, prompt, model, voice, seconds, styleName: visual ? style?.name : undefined, status: "running" as const, error: undefined } };
+      const stopWork = beginWork(project.id);
+      pending.set(project.id, node.id, cost, key);
       await data.upsertNode(running);
       const sources = (role: string) => state.edges.filter((e) => e.to === node.id && e.role === role).map((e) => byId.get(e.from)).filter((n): n is CanvasNode => !!n?.data.mediaUrl);
       const cited = mentionedNodes(prompt, state.nodes).filter((n) => n.type === "image" && n.data.mediaUrl);
@@ -247,6 +250,9 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           : code === "no_source" ? "Reliez ou citez (@) l'image à modifier. Crédits rendus."
           : "La génération n'a pas abouti. Vos crédits ont été rendus.";
         await data.upsertNode({ ...running, data: { ...running.data, status: "failed", error: msg } });
+      } finally {
+        pending.clear(project.id, node.id);
+        stopWork();
       }
     },
     plan,
@@ -331,10 +337,14 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   };
   const paste = async () => {
     if (!clipboard.length) return;
-    const copies = clipboard.map((n) => {
-      const p = absolute(n);
-      return { ...structuredClone(n), id: crypto.randomUUID(), projectId: project.id, sectionId: null, x: p.x + 60, y: p.y + 60, name: `${n.name} (copie)` };
-    });
+    // Les copies gardent leur disposition relative et vont dans une zone libre (jamais sur les originaux).
+    const pts = clipboard.map(absolute);
+    const minX = Math.min(...pts.map((p) => p.x)), minY = Math.min(...pts.map((p) => p.y));
+    const spot = centerPoint();
+    const copies = clipboard.map((n, i) => ({
+      ...structuredClone(n), id: crypto.randomUUID(), projectId: project.id, sectionId: null,
+      x: spot.x + pts[i].x - minX, y: spot.y + pts[i].y - minY, name: `${n.name} (copie)`,
+    }));
     await data.upsertNodes(copies);
   };
 
@@ -363,7 +373,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   return (
     <CanvasActionsContext.Provider value={actions}>
-      <div className="relative size-full bg-canvas"
+      <div className="relative size-full bg-canvas" role="region" aria-label="Toile du projet"
         onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); importFiles(e.dataTransfer.files); } }}
         onKeyDown={(e) => {
@@ -396,7 +406,6 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           fitView
           fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
           proOptions={{ hideAttribution: true }}
-          aria-label="Toile du projet"
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--color-border)" />
         </ReactFlow>

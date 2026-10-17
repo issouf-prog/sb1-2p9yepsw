@@ -109,7 +109,8 @@ export function synthMusic(prompt: string, durationMs: number): AudioResult {
 export const simulatedGen: GenProvider = {
   async image({ prompt, aspectRatio }) {
     await wait(900 + Math.random() * 900);
-    if (/\b(?:échec|echec)\b/i.test(prompt)) throw new Error("simulated_failure");
+    // Mot-clé de test : un prompt contenant « échec » simule une panne du fournisseur.
+    if (/(^|[^\p{L}])[ée]chec([^\p{L}]|$)/iu.test(prompt)) throw new Error("simulated_failure");
     return placeholderImage(prompt, aspectRatio);
   },
   async video({ prompt, aspectRatio, startFrameUrl }) {

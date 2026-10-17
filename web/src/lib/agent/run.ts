@@ -12,6 +12,7 @@ import { mediaSize } from "../canvas";
 import { titleFrom } from "../data/fake";
 import { moderate, flaggedMessage } from "../moderation";
 import { applyStyle } from "../data/styles";
+import { beginWork, pending } from "./recovery";
 
 interface TurnInput {
   projectId: string;
@@ -32,7 +33,19 @@ function planShots(idea: string): { section: string; shots: string[] } {
   };
 }
 
-export async function runAgentTurn({ projectId, conversationId, text, selectedNodeIds }: TurnInput): Promise<void> {
+export async function runAgentTurn(input: TurnInput): Promise<void> {
+  const stop = beginWork(input.projectId);
+  const turnId = crypto.randomUUID();
+  try {
+    await turn(input, turnId);
+    // Fin normale : tout ce qui devait être rendu l'a été. Une interruption laisse la trace pour la reprise.
+    pending.clear(input.projectId, turnId);
+  } finally {
+    stop();
+  }
+}
+
+async function turn({ projectId, conversationId, text, selectedNodeIds }: TurnInput, turnId: string): Promise<void> {
   const project = await data.getProject(projectId);
   if (!project) return;
 
@@ -102,6 +115,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
     const launch = await act("spend", label);
     try {
       await data.spend(total, `batch:${reply.id}:${label}`);
+      pending.set(projectId, turnId, total, `batch:${reply.id}:${label}`);
       await finish(launch, "done");
       return { ok: true as const, total, key: `batch:${reply.id}:${label}` };
     } catch (e) {
@@ -140,6 +154,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
       const r = isMusic ? await gen.music({ prompt: content, model, durationMs: musicDurationMs(model) }) : await gen.voice({ text: content, voice, model });
       const done: CanvasNode = { ...node, type: "audio", name: isMusic ? `Musique — ${titleFrom(content).slice(0, 24)}` : `Voix — ${VOICES.find((v) => v.id === voice)!.label}`, data: { ...node.data, status: "done", mediaUrl: r.url, durationMs: r.durationMs } };
       await data.upsertNode(done);
+      pending.consume(projectId, turnId, c.total);
       await finish(a, "done");
       const t = await act("edit_timeline", "Placer le son dans le montage");
       await appendAudio(projectId, done);
@@ -179,6 +194,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
     try {
       const r = await gen.image({ prompt: applyStyle(node.data.prompt!, style), model: node.data.model!, aspectRatio: project.aspectRatio });
       await data.upsertNode({ ...node, type: "image", data: { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
+      pending.consume(projectId, turnId, c.total);
       await finish(a, "done");
       await say(
         { type: "text", text: "La fiche est prête : " },
@@ -225,6 +241,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
     }
     throw e;
   }
+  pending.set(projectId, turnId, total, batchKey);
   await finish(launch, "done");
 
   let refund = 0;
@@ -233,7 +250,10 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
   if (animateOnly && selectedImage) {
     const vid = await generateVideoFrom(projectId, selectedImage, text, project.aspectRatio, act, finish);
     if (!vid) refund += unitCost[0];
-    else await say({ type: "text", text: "C'est fait : " }, { type: "asset", nodeId: vid.id, kind: "video", label: vid.name }, { type: "text", text: " est relié à l'image de départ." });
+    else {
+      pending.consume(projectId, turnId, unitCost[0]);
+      await say({ type: "text", text: "C'est fait : " }, { type: "asset", nodeId: vid.id, kind: "video", label: vid.name }, { type: "text", text: " est relié à l'image de départ." });
+    }
   } else {
     if (!(await data.document(projectId))) {
       const da = await act("write_document", "Écrire le brief et le scénario");
@@ -262,6 +282,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
         node.data = { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height, styleName: style?.name };
         await data.upsertNode(node);
         images.push(node);
+        pending.consume(projectId, turnId, unitCost[i]);
         await finish(a, "done");
         if (!project.thumbnailUrl && i === 0) await data.updateProject(projectId, { thumbnailUrl: r.url });
       } catch {
@@ -277,6 +298,7 @@ export async function runAgentTurn({ projectId, conversationId, text, selectedNo
       video = await generateVideoFrom(projectId, images[0], `Mouvement lent de caméra — ${plan.shots[0]}`, project.aspectRatio, act, finish, section.id, slot(project.aspectRatio, 2).x);
     }
     if (!video) refund += unitCost[2];
+    else pending.consume(projectId, turnId, unitCost[2]);
 
     const blocks: ContentBlock[] = [{ type: "text", text: "J'ai créé la section " }, { type: "asset", nodeId: section.id, kind: "section", label: section.name }, { type: "text", text: " avec " }];
     images.forEach((n, i) => {

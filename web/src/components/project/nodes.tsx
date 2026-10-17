@@ -1,0 +1,201 @@
+"use client";
+
+import { Handle, NodeToolbar, Position, type Node, type NodeProps } from "@xyflow/react";
+import {
+  Heart, Pencil, Download, Maximize2, CopyPlus, Trash2, Copy, RefreshCw, Video, Film, Play, Loader2, AlertCircle, ChevronDown, ImageIcon, Check,
+} from "lucide-react";
+import { useState } from "react";
+import { IconButton } from "@/components/ui/icon-button";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
+import { mediaSize } from "@/lib/canvas";
+import { MODELS } from "@/lib/data/prices";
+import type { CanvasNode, Section } from "@/lib/data";
+import { useCanvasActions } from "./canvas-actions";
+
+export type SectionRF = Node<{ section: Section }, "section">;
+export type MediaRF = Node<{ node: CanvasNode }, "media">;
+export type NoteRF = Node<{ node: CanvasNode }, "note">;
+
+const hidden = "!size-2 !min-h-0 !min-w-0 !border-0 !bg-transparent";
+
+export function SectionNode({ data }: NodeProps<SectionRF>) {
+  const { toggleSection } = useCanvasActions();
+  const s = data.section;
+  return (
+    <div className="size-full">
+      <button
+        onClick={() => toggleSection(s.id)}
+        aria-expanded={!s.collapsed}
+        title={s.name}
+        className="nodrag absolute -top-14 left-0 inline-flex max-w-full items-center gap-2 border border-border bg-surface px-4 py-2 text-lg hover:border-border-input"
+      >
+        <ChevronDown aria-hidden className={cn("size-5 transition-transform duration-fast", s.collapsed && "-rotate-90")} />
+        <span className="truncate">{s.name}</span>
+      </button>
+      {!s.collapsed && <div className="size-full bg-section" />}
+    </div>
+  );
+}
+
+function MenuRow({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button role="menuitem" disabled={disabled} onClick={onClick}
+      className="flex h-10 w-full items-center gap-3 px-4 text-left text-base hover:bg-surface-sunken disabled:opacity-40 [&>svg]:size-5 [&>svg]:text-text-muted">
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
+  const actions = useCanvasActions();
+  const n = data.node;
+  const { w, h } = mediaSize(actions.ratio);
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const status = n.data.status ?? "done";
+
+  if (n.type === "generator") return <GeneratorNode node={n} selected={!!selected} w={w} h={h} />;
+
+  const isVideo = n.type === "video";
+  return (
+    <div style={{ width: w }} className={cn("border bg-surface", selected ? "border-text" : "border-border")}>
+      <Handle type="target" position={Position.Left} className={hidden} />
+      <Handle type="source" position={Position.Right} className={hidden} />
+
+      <NodeToolbar isVisible={selected} position={Position.Top} align="start" offset={8}>
+        <div role="toolbar" aria-label={`Actions sur ${n.name}`} className="flex items-center gap-0.5 border border-border bg-surface px-1 shadow-toolbar">
+          <IconButton label={n.data.favorite ? "Retirer des favoris" : "Ajouter aux favoris"} active={n.data.favorite} className="size-8"
+            icon={<Heart className={cn("size-4", n.data.favorite && "fill-current")} />}
+            onClick={() => actions.update({ ...n, data: { ...n.data, favorite: !n.data.favorite } })} />
+          <span className="mx-1 max-w-52 truncate text-base" title={n.name}>{n.name}</span>
+          <IconButton label="Renommer" className="size-8" icon={<Pencil className="size-4 text-text-muted" />}
+            onClick={() => { const name = prompt("Nouveau nom", n.name); if (name?.trim()) actions.update({ ...n, name: name.trim() }); }} />
+          <span aria-hidden className="mx-1 h-5 w-px bg-border" />
+          <a href={n.data.mediaUrl} download={`${n.name}.${isVideo ? "svg" : "svg"}`} aria-label="Télécharger" title="Télécharger"
+            className="inline-flex size-8 items-center justify-center rounded-pill hover:bg-surface-sunken"><Download className="size-4" /></a>
+          <IconButton label="Plein écran" className="size-8" icon={<Maximize2 className="size-4" />} onClick={() => actions.preview(n)} />
+          <IconButton label="Dupliquer" className="size-8" icon={<CopyPlus className="size-4" />} onClick={() => actions.duplicate(n)} />
+        </div>
+      </NodeToolbar>
+
+      <NodeToolbar isVisible={selected} position={Position.Right} align="start" offset={12}>
+        <div role="menu" aria-label={`Menu de ${n.name}`} className="w-60 border border-border bg-surface py-2 shadow-pop">
+          <MenuRow icon={<RefreshCw />} label="Relancer" onClick={() => actions.regenerate(n)} disabled={!n.data.prompt || isVideo} />
+          <div className="mx-4 my-2 h-px bg-border" />
+          {!isVideo && <MenuRow icon={<Video />} label="Animer cette image" onClick={() => actions.animate(n)} />}
+          <MenuRow icon={<Film />} label="Envoyer au montage (bientôt)" disabled />
+          <div className="mx-4 my-2 h-px bg-border" />
+          <MenuRow icon={<Trash2 />} label="Supprimer" onClick={() => actions.remove([n.id])} />
+        </div>
+      </NodeToolbar>
+
+      <div className="relative overflow-hidden bg-surface-sunken" style={{ height: h }}>
+        {n.data.mediaUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={isVideo ? n.data.posterUrl : n.data.mediaUrl} alt={n.data.prompt ?? n.name} draggable={false}
+            className={cn("size-full object-cover", playing && "animate-[kenburns_5s_ease-in-out_forwards]")}
+            onAnimationEnd={() => setPlaying(false)} />
+        )}
+        {isVideo && (
+          <button onClick={() => setPlaying(true)} aria-label={`Lire ${n.name}`}
+            className="nodrag absolute inset-0 m-auto flex size-12 items-center justify-center rounded-pill bg-primary/60 text-on-primary hover:bg-primary/80">
+            <Play className="size-5" />
+          </button>
+        )}
+      </div>
+      <p className="px-2 pt-1 text-right text-xs tabular-nums text-text-muted">
+        {n.data.width} × {n.data.height} px{isVideo && n.data.durationMs ? ` · ${(n.data.durationMs / 1000).toFixed(1)} s · aperçu simulé` : ""}
+        {status === "failed" && " · échec"}
+      </p>
+      {n.data.prompt && (
+        <div className="px-2 pb-2">
+          <div className="flex items-start gap-1">
+            <p className={cn("flex-1 text-sm", !open && "line-clamp-3")}><mark className="bg-highlight text-text">{n.data.prompt}</mark></p>
+            <IconButton label={copied ? "Copié" : "Copier le prompt"} className="nodrag size-7"
+              icon={copied ? <Check className="size-4" /> : <Copy className="size-4 text-text-muted" />}
+              onClick={() => { navigator.clipboard?.writeText(n.data.prompt!); setCopied(true); setTimeout(() => setCopied(false), 1200); }} />
+          </div>
+          <button onClick={() => setOpen(!open)} aria-expanded={open} className="nodrag mt-1 text-xs text-text-muted hover:text-text">
+            {open ? "Voir moins" : "Voir tout"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: boolean; w: number; h: number }) {
+  const actions = useCanvasActions();
+  const kind = node.data.action === "generate_video" ? "video" : "image";
+  const [prompt, setPrompt] = useState(node.data.prompt ?? "");
+  const [model, setModel] = useState(node.data.model ?? MODELS[kind][1].id);
+  const status = node.data.status ?? "idle";
+  const cost = MODELS[kind].find((m) => m.id === model)?.credits ?? 0;
+  const running = status === "running";
+
+  return (
+    <div style={{ width: w }}>
+      <Handle type="target" position={Position.Left} className={hidden} />
+      <Handle type="source" position={Position.Right} className={hidden} />
+      <p className="mb-1 truncate text-sm text-text-muted" title={node.name}>{node.name}</p>
+      <div style={{ height: h }} className={cn("flex flex-col items-center justify-center gap-2 border border-dashed bg-surface px-4 text-center", selected ? "border-text" : "border-border-input")}>
+        {running ? (
+          <>
+            <Loader2 aria-hidden className="size-6 animate-spin text-text-muted" />
+            <p className="text-sm">Génération en cours…</p>
+          </>
+        ) : status === "failed" ? (
+          <>
+            <AlertCircle aria-hidden className="size-6 text-danger" />
+            <p className="text-sm text-danger">{node.data.error ?? "La génération n'a pas abouti."}</p>
+          </>
+        ) : (
+          <>
+            {kind === "image" ? <ImageIcon aria-hidden className="size-6 text-text-muted" /> : <Video aria-hidden className="size-6 text-text-muted" />}
+            <p className="text-sm">{kind === "image" ? "Nouvelle image" : "Image vers vidéo"}</p>
+            <p className="text-xs text-text-muted">{selected ? "Réglez puis lancez ci-dessous" : "Sélectionnez pour régler"}</p>
+          </>
+        )}
+      </div>
+      <NodeToolbar isVisible={selected && !running} position={Position.Bottom} align="start" offset={10}>
+        <form
+          onSubmit={(e) => { e.preventDefault(); if (prompt.trim()) actions.runGenerator(node, { prompt: prompt.trim(), model }); }}
+          className="nodrag w-[22rem] space-y-3 border border-border bg-surface p-3 shadow-pop"
+        >
+          <label className="block">
+            <span className="text-xs text-text-muted">Modèle</span>
+            <select value={model} onChange={(e) => setModel(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+              {MODELS[kind].map((m) => <option key={m.id} value={m.id}>{m.label} · {m.credits} crédits</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs text-text-muted">Prompt du plan</span>
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} maxLength={2000}
+              placeholder={kind === "image" ? "Décrivez le plan : sujet, cadrage, lumière…" : "Décrivez le mouvement"}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }}
+              className="mt-1 block w-full resize-none border border-border-input bg-surface px-2 py-1.5 text-sm outline-none focus:border-text" />
+          </label>
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" cost={cost} disabled={!prompt.trim()}>Lancer</Button>
+          </div>
+        </form>
+      </NodeToolbar>
+    </div>
+  );
+}
+
+export function NoteNode({ data, selected }: NodeProps<NoteRF>) {
+  const { update } = useCanvasActions();
+  const n = data.node;
+  return (
+    <div className={cn("w-60 border bg-highlight/60 p-3", selected ? "border-text" : "border-border")}>
+      <label className="sr-only" htmlFor={`note-${n.id}`}>Note</label>
+      <textarea id={`note-${n.id}`} defaultValue={n.data.prompt} rows={4} placeholder="Écrivez une note ou un prompt…"
+        onBlur={(e) => e.target.value !== (n.data.prompt ?? "") && update({ ...n, data: { ...n.data, prompt: e.target.value } })}
+        className="nodrag block w-full resize-none bg-transparent text-sm outline-none" />
+    </div>
+  );
+}

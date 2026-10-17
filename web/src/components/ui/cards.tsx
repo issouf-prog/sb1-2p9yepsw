@@ -14,15 +14,23 @@ export function Thumb({ seed, children, className = "" }: { seed: string; childr
   );
 }
 
-export function ProjectCard({ title, updatedAt }: { title: string; updatedAt: string }) {
+export function ProjectCard({ title, updatedAt, href = "#", thumbnailUrl, menu }: { title: string; updatedAt: string; href?: string; thumbnailUrl?: string | null; menu?: React.ReactNode }) {
   return (
-    <a href="#" className="group block w-80 border border-text bg-surface transition-shadow duration-fast hover:shadow-pop">
-      <Thumb seed={title} className="aspect-[16/9]" />
-      <div className="px-5 py-4">
-        <p className="truncate text-xl" title={title}>{title}</p>
-        <p className="mt-1 text-base text-text-muted">Modifié le {updatedAt}</p>
-      </div>
-    </a>
+    <div className="group relative w-full border border-text bg-surface transition-shadow duration-fast hover:shadow-pop sm:w-80">
+      <a href={href} className="block">
+        <Thumb seed={title} className="aspect-[16/9]">
+          {thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
+          )}
+        </Thumb>
+        <div className="px-5 py-4 pr-12">
+          <p className="truncate text-xl" title={title}>{title}</p>
+          <p className="mt-1 text-base text-text-muted">Modifié le {updatedAt}</p>
+        </div>
+      </a>
+      {menu && <div className="absolute bottom-4 right-3">{menu}</div>}
+    </div>
   );
 }
 

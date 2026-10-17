@@ -1,0 +1,268 @@
+"use client";
+
+import "@xyflow/react/dist/style.css";
+import {
+  ReactFlow, Background, BackgroundVariant, useNodesState, useEdgesState, useReactFlow, useViewport, useOnSelectionChange,
+  type Edge, type Node, type NodeChange,
+} from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote,
+} from "lucide-react";
+import { data, InsufficientCreditsError, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
+import { DEFAULT_MODEL, priceOf } from "@/lib/data/prices";
+import { gen } from "@/lib/gen";
+import { mediaSize } from "@/lib/canvas";
+import { IconButton } from "@/components/ui/icon-button";
+import { VerticalToolbar, ToolbarDivider } from "@/components/ui/canvas-bits";
+import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSub, MenuSubTrigger, MenuSubContent } from "@/components/ui/menu";
+import { Dialog } from "@/components/ui/dialog";
+import { useApp } from "@/components/app/app-context";
+import { CanvasActionsContext, type CanvasActions } from "./canvas-actions";
+import { SectionNode, MediaNode, NoteNode } from "./nodes";
+
+const nodeTypes = { section: SectionNode, media: MediaNode, note: NoteNode };
+
+function toFlow(state: CanvasState, selected: Set<string>): Node[] {
+  const collapsed = new Set(state.sections.filter((s) => s.collapsed).map((s) => s.id));
+  const sections: Node[] = state.sections.map((s) => ({
+    id: s.id, type: "section", position: { x: s.x, y: s.y }, data: { section: s },
+    style: { width: s.w, height: s.collapsed ? 1 : s.h }, selectable: false, draggable: !s.locked,
+  }));
+  const nodes: Node[] = state.nodes.map((n) => ({
+    id: n.id,
+    type: n.type === "text" ? "note" : "media",
+    position: { x: n.x, y: n.y },
+    data: { node: n },
+    ...(n.sectionId ? { parentId: n.sectionId } : {}),
+    hidden: !!n.sectionId && collapsed.has(n.sectionId),
+    selected: selected.has(n.id),
+    ariaLabel: `${n.name}${n.data.status === "running" ? ", génération en cours" : ""}`,
+  }));
+  return [...sections, ...nodes];
+}
+
+function toEdges(state: CanvasState): Edge[] {
+  return state.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, type: "default", selectable: false }));
+}
+
+export function Canvas({ project, state, onSelectionChange }: { project: Project; state: CanvasState; onSelectionChange: (ids: string[]) => void }) {
+  const { openTopUp } = useApp();
+  const flow = useReactFlow();
+  const { zoom } = useViewport();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges] = useEdgesState<Edge>([]);
+  const [hand, setHand] = useState(false);
+  const [preview, setPreview] = useState<CanvasNode | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNodes(toFlow(state, selected));
+    setEdges(toEdges(state));
+    // la sélection est gérée par React Flow ; on ne resynchronise qu'à chaque changement de données
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, setNodes, setEdges]);
+
+  useOnSelectionChange({
+    onChange: useCallback(({ nodes: sel }: { nodes: Node[] }) => {
+      const ids = sel.map((n) => n.id);
+      setSelected(new Set(ids));
+      onSelectionChange(ids);
+    }, [onSelectionChange]),
+  });
+
+  const byId = useMemo(() => new Map(state.nodes.map((n) => [n.id, n])), [state.nodes]);
+
+  const centerPoint = () => {
+    const el = document.querySelector(".react-flow") as HTMLElement | null;
+    const r = el?.getBoundingClientRect();
+    return flow.screenToFlowPosition({ x: (r?.left ?? 0) + (r?.width ?? 800) / 2 - 120, y: (r?.top ?? 0) + (r?.height ?? 600) / 2 - 160 });
+  };
+
+  const addGenerator = async (action: "generate_image" | "generate_video", from?: CanvasNode) => {
+    const p = from ? { x: from.x + mediaSize(project.aspectRatio).w + 80, y: from.y } : centerPoint();
+    const node: CanvasNode = {
+      id: crypto.randomUUID(), projectId: project.id, sectionId: from?.sectionId ?? null, type: "generator",
+      name: action === "generate_image" ? "Nouvelle image" : "Image vers vidéo", x: p.x, y: p.y,
+      data: { action, model: action === "generate_image" ? DEFAULT_MODEL.image : DEFAULT_MODEL.video, status: "idle" },
+    };
+    await data.upsertNode(node);
+    if (from) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role: "start_frame" });
+    setNodes((ns) => ns.map((n) => ({ ...n, selected: false })));
+    setTimeout(() => setNodes((ns) => ns.map((n) => (n.id === node.id ? { ...n, selected: true } : n))), 0);
+    return node;
+  };
+
+  const actions: CanvasActions = {
+    ratio: project.aspectRatio,
+    async runGenerator(node, { prompt, model }) {
+      const kind = node.data.action === "generate_video" ? "video" : "image";
+      const key = `gen:${node.id}:${Date.now()}`;
+      const cost = priceOf(kind, model);
+      try {
+        await data.spend(cost, key);
+      } catch (e) {
+        if (e instanceof InsufficientCreditsError) {
+          setNotice(`Il manque ${e.needed - e.available} crédits pour lancer ce plan. Rien n'a été débité.`);
+          openTopUp();
+          return;
+        }
+        throw e;
+      }
+      const running = { ...node, data: { ...node.data, prompt, model, status: "running" as const, error: undefined } };
+      await data.upsertNode(running);
+      try {
+        if (kind === "image") {
+          const r = await gen.image({ prompt, model, aspectRatio: project.aspectRatio });
+          await data.upsertNode({ ...running, type: "image", data: { ...running.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
+          if (!project.thumbnailUrl) await data.updateProject(project.id, { thumbnailUrl: r.url });
+        } else {
+          const src = state.edges.find((e) => e.to === node.id && e.role === "start_frame");
+          const frame = src && byId.get(src.from)?.data.mediaUrl;
+          if (!frame) throw new Error("no_start_frame");
+          const r = await gen.video({ prompt, model, startFrameUrl: frame, aspectRatio: project.aspectRatio });
+          await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: r.width, height: r.height, durationMs: r.durationMs } });
+        }
+      } catch (err) {
+        await data.refund(cost, key);
+        const msg = err instanceof Error && err.message === "no_start_frame"
+          ? "Reliez une image de départ à ce nœud. Crédits rendus."
+          : "La génération n'a pas abouti. Vos crédits ont été rendus.";
+        await data.upsertNode({ ...running, data: { ...running.data, status: "failed", error: msg } });
+      }
+    },
+    async animate(node) {
+      await addGenerator("generate_video", node);
+    },
+    async regenerate(node) {
+      const copy: CanvasNode = { ...node, id: crypto.randomUUID(), type: "generator", name: `${node.name} (variante)`, x: node.x, y: node.y + 40, data: { action: "generate_image", prompt: node.data.prompt, model: node.data.model ?? DEFAULT_MODEL.image, status: "idle" } };
+      await data.upsertNode(copy);
+      await actions.runGenerator(copy, { prompt: node.data.prompt ?? "", model: copy.data.model! });
+    },
+    update: (n) => data.upsertNode(n),
+    remove: (ids) => data.deleteNodes(ids),
+    async duplicate(node) {
+      await data.upsertNode({ ...node, id: crypto.randomUUID(), name: `${node.name} (copie)`, x: node.x + 40, y: node.y + 40 });
+    },
+    async toggleSection(id) {
+      const s = state.sections.find((x) => x.id === id);
+      if (s) await data.upsertSection({ ...s, collapsed: !s.collapsed });
+    },
+    preview: setPreview,
+  };
+
+  const onChange = useCallback((changes: NodeChange[]) => {
+    // Supprimer au clavier passe par la couche de données (les sections ne se suppriment pas ainsi).
+    const removed = changes.filter((c) => c.type === "remove").map((c) => c.id).filter((id) => byId.has(id));
+    if (removed.length) data.deleteNodes(removed);
+    onNodesChange(changes.filter((c) => c.type !== "remove"));
+  }, [onNodesChange, byId]);
+
+  const onDragStop = useCallback((_: unknown, __: Node, dragged: Node[]) => {
+    for (const d of dragged) {
+      const n = byId.get(d.id);
+      if (n) data.upsertNode({ ...n, x: d.position.x, y: d.position.y });
+      const s = state.sections.find((x) => x.id === d.id);
+      if (s) data.upsertSection({ ...s, x: d.position.x, y: d.position.y });
+    }
+  }, [byId, state.sections]);
+
+  const addNote = async () => {
+    const p = centerPoint();
+    await data.upsertNode({ id: crypto.randomUUID(), projectId: project.id, sectionId: null, type: "text", name: "Note", x: p.x, y: p.y, data: { prompt: "" } });
+  };
+
+  const empty = state.nodes.length === 0 && state.sections.length === 0;
+
+  return (
+    <CanvasActionsContext.Provider value={actions}>
+      <div className="relative size-full bg-canvas"
+        onKeyDown={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("input, textarea, select, [contenteditable]")) return;
+          if (e.key === "t" || e.key === "T") { e.preventDefault(); addNote(); }
+          if (e.key === "h" || e.key === "H") setHand((v) => !v);
+          if (e.key === "v" || e.key === "V") setHand(false);
+        }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onChange}
+          onNodeDragStop={onDragStop}
+          panOnDrag={hand ? true : [1, 2]}
+          selectionOnDrag={!hand}
+          panOnScroll
+          zoomOnScroll={false}
+          zoomActivationKeyCode={["Meta", "Control"]}
+          deleteKeyCode={["Backspace", "Delete"]}
+          minZoom={0.1}
+          maxZoom={2}
+          fitView
+          fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+          proOptions={{ hideAttribution: true }}
+          aria-label="Toile du projet"
+        >
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--color-border)" />
+        </ReactFlow>
+
+        <div className="absolute left-3 top-1/2 z-10 -translate-y-1/2">
+          <VerticalToolbar zoom={Math.round(zoom * 100)}>
+            <Menu>
+              <MenuTrigger asChild>
+                <IconButton tone="solid" label="Ajouter" icon={<Plus className="size-5" />} />
+              </MenuTrigger>
+              <MenuContent side="right">
+                <MenuItem icon={<Upload />} disabled>Importer un fichier (bientôt)</MenuItem>
+                <MenuItem icon={<StickyNote />} onSelect={addNote}>Note</MenuItem>
+                <MenuItem icon={<ImageIcon />} onSelect={() => addGenerator("generate_image")}>Générer une image</MenuItem>
+                <MenuSub>
+                  <MenuSubTrigger icon={<Video />}>Générer une vidéo</MenuSubTrigger>
+                  <MenuSubContent>
+                    <MenuItem disabled>Sélectionnez une image puis « Animer cette image »</MenuItem>
+                  </MenuSubContent>
+                </MenuSub>
+                <MenuItem icon={<Mic />} disabled>Générer une voix (bientôt)</MenuItem>
+                <MenuItem icon={<Music />} disabled>Générer de la musique (bientôt)</MenuItem>
+              </MenuContent>
+            </Menu>
+            <IconButton label="Sélection" shortcut="V" active={!hand} onClick={() => setHand(false)} icon={<MousePointer2 className="size-5" />} />
+            <IconButton label="Main" shortcut="H" active={hand} onClick={() => setHand(true)} icon={<Hand className="size-5" />} />
+            <IconButton label="Note" shortcut="T" onClick={addNote} icon={<Type className="size-5" />} />
+            <ToolbarDivider />
+            <IconButton label="Ressources (bientôt)" aria-disabled icon={<Images className="size-5" />} />
+            <IconButton label="Histoire (bientôt)" aria-disabled icon={<FileText className="size-5" />} />
+            <IconButton label="Montage (bientôt)" aria-disabled icon={<Clapperboard className="size-5" />} />
+            <ToolbarDivider />
+            <IconButton label="Tout afficher" shortcut="Ctrl+1" onClick={() => flow.fitView({ padding: 0.25, duration: 200 })} icon={<Maximize className="size-5" />} />
+            <IconButton label="Réglages (bientôt)" aria-disabled icon={<Settings className="size-5" />} />
+          </VerticalToolbar>
+        </div>
+
+        {empty && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+            <div className="max-w-sm text-center">
+              <p className="text-xl">Toile vide</p>
+              <p className="mt-2 text-text-muted">Décrivez votre film à l&apos;agent à droite, ou ajoutez un plan avec le bouton +.</p>
+            </div>
+          </div>
+        )}
+
+        {notice && (
+          <div role="alert" className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 border border-border bg-surface px-4 py-3 shadow-pop">
+            <span>{notice}</span>
+            <button onClick={() => setNotice(null)} className="text-sm text-text-muted underline">Fermer</button>
+          </div>
+        )}
+
+        <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)} title={preview?.name ?? ""} description={preview?.data.prompt}>
+          {preview?.data.mediaUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview.data.posterUrl ?? preview.data.mediaUrl} alt={preview.data.prompt ?? preview.name} className="max-h-[70vh] w-full object-contain" />
+          )}
+        </Dialog>
+      </div>
+    </CanvasActionsContext.Provider>
+  );
+}

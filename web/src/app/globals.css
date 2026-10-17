@@ -20,3 +20,17 @@
     outline-offset: 2px;
   }
 }
+
+@keyframes kenburns {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.12) translate(-3%, -2%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* React Flow : on garde ses mécanismes, nos tokens pour l'apparence. */
+.react-flow__node-section { z-index: -1 !important; }
+.react-flow__edge-path { stroke: var(--color-border-input); stroke-width: 1.25; }
+.react-flow__controls { display: none; }

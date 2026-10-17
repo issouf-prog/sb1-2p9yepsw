@@ -1,37 +1,37 @@
 feature,area,priority,original,clone,notes
-Inscription et connexion email + Google,comptes,must,yes,no,S02
-Crédits offerts à l'inscription,crédits,must,yes,no,300 chez Flick
-Page Projets avec boîte de prompt,projets,must,yes,no,S03 F01
-Bouton Blank canvas,projets,must,yes,no,S03
-Liste des projets avec cartes et menu (renommer supprimer),projets,must,yes,no,S04 onglets exacts à confirmer
-Choix du ratio (16:9 9:16 1:1 21:9 4:3 3:4 5:4),projets,must,yes,no,épinglé en haut du canvas
+Inscription et connexion email + Google,comptes,must,yes,partial,S02 | clone: simulée ; Supabase Auth à brancher
+Crédits offerts à l'inscription,crédits,must,yes,yes,300 chez Flick | clone: 300 crédits
+Page Projets avec boîte de prompt,projets,must,yes,yes,S03 F01 | clone: S03
+Bouton Blank canvas,projets,must,yes,yes,S03 | clone: puce Toile vide
+Liste des projets avec cartes et menu (renommer supprimer),projets,must,yes,yes,S04 onglets exacts à confirmer | clone: S04 + recherche
+Choix du ratio (16:9 9:16 1:1 21:9 4:3 3:4 5:4),projets,must,yes,yes,épinglé en haut du canvas | clone: accueil ; pas encore modifiable dans le projet
 Catalogue de styles visuels,styles,must,yes,no,S05 avec tes propres presets
-Canvas infini (pan zoom sélection rectangle),canvas,must,yes,no,S07
-Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,no,S07
-Nœud texte comme prompt connectable,canvas,must,yes,no,Disconnect
-Connexions entre nœuds (prompt start frame références),canvas,must,yes,no,Edge
-Copier coller supprimer des nœuds,canvas,must,yes,no,raccourcis
-Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,no,
-Sauvegarde automatique du canvas,canvas,must,yes,no,
-Nœud Generate Image (modèle prompt lot Run),images,must,yes,no,S08 F02
-Coût affiché sur le bouton Run avant génération,crédits,must,yes,no,
+Canvas infini (pan zoom sélection rectangle),canvas,must,yes,yes,S07 | clone: React Flow
+Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,partial,"S07 | clone: ajouter, sélection, main, note, tout afficher ; section/ressources à venir"
+Nœud texte comme prompt connectable,canvas,must,yes,partial,Disconnect | clone: note éditable ; pas encore connectable
+Connexions entre nœuds (prompt start frame références),canvas,must,yes,partial,Edge | clone: start frame seulement
+Copier coller supprimer des nœuds,canvas,must,yes,partial,raccourcis | clone: supprimer + dupliquer ; copier-coller à venir
+Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,partial,"clone: T, V, H, Suppr ; Entrée lance dans le panneau"
+Sauvegarde automatique du canvas,canvas,must,yes,yes,clone: positions et contenus
+Nœud Generate Image (modèle prompt lot Run),images,must,yes,partial,"S08 F02 | clone: modèle, prompt, Lancer ; pas de lot"
+Coût affiché sur le bouton Run avant génération,crédits,must,yes,yes,
 Référence @asset dans les prompts,canvas,must,yes,no,
-Statut de génération sur le nœud (en cours terminé échec),images,must,yes,no,
+Statut de génération sur le nœud (en cours terminé échec),images,must,yes,yes,
 Modèles verrouillés selon le plan,crédits,must,yes,no,Run devient Upgrade
 Edit Image,images,must,yes,no,S09
 Character Reference (≤5 perso ≤5 scène),images,must,yes,no,F03
-Generate Video depuis une image (start frame),vidéo,must,yes,no,F04
+Generate Video depuis une image (start frame),vidéo,must,yes,partial,F04 | clone: simulée : aperçu animé de l'image
 End frame optionnel,vidéo,must,yes,no,selon modèle
-Choix du modèle vidéo durée résolution,vidéo,must,yes,no,
+Choix du modèle vidéo durée résolution,vidéo,must,yes,partial,clone: 3 modèles ; durée/résolution à venir
 Modèle Auto,vidéo,must,yes,no,
 Upload d'images et de vidéos,assets,must,yes,no,S13
 Panneau Assets du projet,assets,must,yes,no,
 Modération des prompts et sorties (flagged),sécurité,must,yes,no,obligatoire avant vente
 File de jobs asynchrone multi-fournisseurs,infra,must,yes,no,via API officielles ou fal.ai/Replicate
-Solde de crédits et grand livre,crédits,must,yes,no,CreditLedger
-Débit atomique et remboursement sur échec,crédits,must,yes,no,
+Solde de crédits et grand livre,crédits,must,yes,partial,CreditLedger | clone: solde + clés d'idempotence (simulé)
+Débit atomique et remboursement sur échec,crédits,must,yes,yes,clone: débit du lot entier + remboursement par plan
 Plans d'abonnement Stripe mensuel et annuel,facturation,must,yes,no,S21
-Recharge ponctuelle de crédits,facturation,must,yes,no,F13
+Recharge ponctuelle de crédits,facturation,must,yes,partial,F13 | clone: simulée ; Stripe à brancher
 Factures et annulation,facturation,must,yes,no,S22
 Monteur : pistes Main Music Text,monteur,must,yes,no,S15
 Monteur : ajouter réordonner trim split,monteur,must,yes,no,F08
@@ -40,7 +40,7 @@ Export 720p 1080p 4K avec rendu serveur,monteur,must,yes,no,S16
 Filigrane selon le plan,monteur,must,yes,no,Free et Casual
 Projet privé ou partagé,partage,must,yes,no,
 Pages légales (CGU confidentialité),légal,must,yes,no,à toi pas copiées
-Section Créé avec Flick sur l'accueil (grille de films),projets,should,yes,no,S03 vu ; avec tes propres films
+Section Créé avec Flick sur l'accueil (grille de films),projets,should,yes,yes,S03 vu ; avec tes propres films | clone: films de démonstration
 Create My Style (1 à 5 images de référence),styles,should,yes,no,S06
 Change Style (transfert de style),images,should,yes,no,
 Remove background,images,should,yes,no,
@@ -48,7 +48,7 @@ Upscale image et vidéo,images,should,yes,no,
 Camera Control,images,should,yes,no,
 Extract Frame depuis une vidéo,vidéo,should,yes,no,
 Omni Reference (image vidéo audio),vidéo,should,yes,no,Standard+
-Sections (nom couleur verrou repli),canvas,should,yes,no,S07
+Sections (nom couleur verrou repli),canvas,should,yes,partial,S07 | clone: nom + repli
 Dossiers dans les assets,assets,should,yes,no,
 Retrouver ses générations,assets,should,yes,no,
 Generate Voice (text to voice),audio,should,yes,no,F07
@@ -66,7 +66,7 @@ Exports récents et Download again,monteur,should,yes,no,
 Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
 Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
 Export du script PDF et Word,script,should,yes,no,
-Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,no,S10 F00 cœur du produit
+Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,S10 F00 cœur du produit | clone: agent simulé à règles : section + 2 images + 1 vidéo ; Claude à brancher
 Agent : pièces jointes et dictée vocale,agent,must,yes,no,trombone et micro
 Agent : Chat rules et Personalize,agent,should,yes,no,
 Script to Film,script,should,yes,no,F06
@@ -79,7 +79,7 @@ Collaboration temps réel sur le canvas,partage,could,yes,no,CRDT
 Commentaires,partage,could,yes,no,
 3D Stage (composants caméras gizmo),3d,could,yes,no,S17
 3D Stage : Rehearse et Record vers le canvas,3d,could,yes,no,F10
-Galerie publique de films,galerie,could,yes,no,S23
+Galerie publique de films,galerie,could,yes,partial,S23 | clone: démonstration statique
 Page film (Like Share Workflow),galerie,could,yes,no,S24
 Publier avec le workflow,galerie,could,yes,no,F09
 Profil créateur,galerie,could,yes,no,S25
@@ -88,18 +88,18 @@ Retraits en argent (cash-out),galerie,could,yes,no,S27 obligations légales de p
 Parrainage et Earn Credits,croissance,could,yes,no,
 Crédits gratuits hebdomadaires,crédits,could,yes,no,100 par semaine chez Flick
 Pages outils SEO,croissance,could,yes,no,S28 avec tes propres textes
-Agent : plusieurs conversations par projet,agent,must,yes,no,liste déroulante + nouvelle conversation
-Agent : cartes d'action avec statut (en cours réussie échouée),agent,must,yes,no,AgentAction
-Agent : puces d'asset inline cliquables,agent,must,yes,no,renvoie au nœud
+Agent : plusieurs conversations par projet,agent,must,yes,yes,liste déroulante + nouvelle conversation
+Agent : cartes d'action avec statut (en cours réussie échouée),agent,must,yes,yes,AgentAction
+Agent : puces d'asset inline cliquables,agent,must,yes,yes,renvoie au nœud | clone: centre et sélectionne le nœud
 Agent : @ pour référencer une ressource,agent,must,yes,no,
-Agent : vérifier le coût total avant un lot,agent,must,no,no,amélioration : Flick lance 1 sur 2 puis échoue
-Agent : messages d'erreur humains avec bouton d'action,agent,must,no,no,amélioration : Flick affiche l'erreur technique brute
-Agent : puces de suggestion,agent,should,yes,no,ex. Revoir le raccord d'abord
+Agent : vérifier le coût total avant un lot,agent,must,no,yes,amélioration : Flick lance 1 sur 2 puis échoue | clone: testé : 3e lot refusé sans débit
+Agent : messages d'erreur humains avec bouton d'action,agent,must,no,yes,amélioration : Flick affiche l'erreur technique brute
+Agent : puces de suggestion,agent,should,yes,yes,ex. Revoir le raccord d'abord
 Agent : sélecteur de modèle Auto,agent,should,yes,no,
-Accueil : puces de démarrage (script prompt personnages style toile vierge),projets,must,yes,no,S03
-Projets récents avec lien Tous les projets,projets,must,yes,no,S03
-Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,no,S04b
-Fenêtre de recharge et upgrade,facturation,must,yes,no,S31
+Accueil : puces de démarrage (script prompt personnages style toile vierge),projets,must,yes,partial,S03 | clone: 4 sur 6 actives
+Projets récents avec lien Tous les projets,projets,must,yes,yes,S03
+Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,yes,S04b
+Fenêtre de recharge et upgrade,facturation,must,yes,partial,S31 | clone: recharge simulée
 Notifications,comptes,should,yes,no,S30
 Générer de la musique depuis le menu +,audio,should,yes,no,S09
 Bandeau d'annonce fermable,croissance,could,yes,no,
@@ -115,12 +115,12 @@ Plateau 3D : blocs d'action sur la timeline (Orbite),3d,could,yes,no,S17
 Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
 Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
 Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,no,cartes d'action vues
-Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,no,amélioration : Flick répond en anglais à un utilisateur français
-Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,no,S09b vu
-Nœud : Régénérer,canvas,must,yes,no,S09b
-Nœud : prompt affiché sous le média avec copier et Voir plus,canvas,must,yes,no,S09b
-Nœud : dimensions et durée du média,canvas,should,yes,no,S09b
-Nœud : lecteur vidéo inline,canvas,must,yes,no,S09b
+Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,partial,amélioration : Flick répond en anglais à un utilisateur français | clone: agent simulé en français
+Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,partial,S09b vu | clone: sans archiver
+Nœud : Régénérer,canvas,must,yes,yes,S09b | clone: crée une variante
+Nœud : prompt affiché sous le média avec copier et Voir plus,canvas,must,yes,yes,S09b
+Nœud : dimensions et durée du média,canvas,should,yes,yes,S09b
+Nœud : lecteur vidéo inline,canvas,must,yes,partial,S09b | clone: aperçu simulé
 Nœud : Enregistrer comme style,styles,should,yes,no,S09b
 Nœud : Ajouter à la timeline,monteur,must,yes,no,S09b
 Nœud : Convertir en 3D,3d,could,yes,no,S09b image vers plateau 3D

@@ -6,7 +6,9 @@ import { data, InsufficientCreditsError, type ActionRecord, type CanvasNode, typ
 import { DEFAULT_MODEL, musicDurationMs, VOICES } from "../data/prices";
 import { gen } from "../gen";
 import { sectionSize, slot } from "../canvas";
-import { storyFromIdea } from "../story";
+import { scenarioOf, storyFromIdea } from "../story";
+import { classify } from "../script";
+import { subtitlesFrom } from "../timeline";
 import { buildTimeline, appendAudio } from "./tools";
 import { mediaSize } from "../canvas";
 import { titleFrom } from "../data/fake";
@@ -85,6 +87,47 @@ async function turn({ projectId, conversationId, text, selectedNodeIds }: TurnIn
   // Demande d'animation d'une image sélectionnée.
   const selectedImage = canvas.nodes.find((n) => selectedNodeIds.includes(n.id) && n.type === "image" && n.data.mediaUrl);
   const wantsMontage = /\bmont(?:e|er|ez|age)\b|timeline/.test(lower);
+  const wantsSubtitles = /sous[- ]?titr/.test(lower);
+  const wantsTransitions = /transition|fondu/.test(lower);
+
+  // Sous-titres et transitions : modifient le montage existant, sans rien générer ni débiter.
+  if (wantsSubtitles || wantsTransitions) {
+    const r0 = await act("read_timeline", "Lire le montage");
+    const tl = await data.timeline(projectId);
+    await finish(r0, "done");
+    if (tl.main.length === 0) {
+      await say({ type: "text", text: "Le montage est vide. Demandez-moi d'abord de monter le film, puis j'ajouterai transitions et sous-titres." });
+      return;
+    }
+    const parts: string[] = [];
+    let next = tl;
+    if (wantsTransitions) {
+      const a = await act("edit_timeline", "Ajouter des fondus enchaînés");
+      const kind = /noir/.test(lower) ? ("black" as const) : ("dissolve" as const);
+      next = { ...next, main: next.main.map((c, i) => (i === 0 ? c : { ...c, transition: { kind, durationMs: 600 } })) };
+      await finish(a, "done");
+      parts.push(`${kind === "black" ? "un fondu au noir" : "un fondu enchaîné"} sur ${next.main.length - 1} raccord${next.main.length > 2 ? "s" : ""}`);
+    }
+    if (wantsSubtitles) {
+      const a = await act("edit_timeline", "Générer les sous-titres");
+      const byId = new Map(canvas.nodes.map((n) => [n.id, n]));
+      const subs = subtitlesFrom(next.audio ?? [], (id) => byId.get(id)?.data.prompt);
+      if (subs.length) {
+        next = { ...next, text: [...next.text.filter((x) => x.kind !== "subtitle"), ...subs] };
+        await finish(a, "done");
+        parts.push(`${subs.length} sous-titres tirés de la voix off`);
+      } else {
+        await finish(a, "failed", "Aucune voix off dans le montage : il n'y a rien à sous-titrer. Demandez-moi une voix off d'abord.");
+      }
+    }
+    if (parts.length) {
+      await data.saveTimeline(next);
+      await say({ type: "text", text: `C'est fait : ${parts.join(" et ")}. ` }, { type: "button", action: "open_editor", label: "Ouvrir le montage" });
+    } else {
+      await say({ type: "text", text: "Je n'ai rien changé au montage." });
+    }
+    return;
+  }
 
   if (wantsMontage) {
     const r0 = await act("read_timeline", "Lire le montage");
@@ -130,6 +173,68 @@ async function turn({ projectId, conversationId, text, selectedNodeIds }: TurnIn
     const right = Math.max(80, ...canvas.sections.map((s) => s.x + s.w + 80), ...canvas.nodes.filter((n) => !n.sectionId).map((n) => n.x + 400));
     return { x: right, y: 80 };
   };
+
+  // Script to Film : un plan par scène du scénario de l'onglet Histoire (6 au plus).
+  const wantsFromScript = /sc[ée]nario|script/.test(lower) && /depuis|à partir|a partir|tourne|filme|plans?\b|script to film/.test(lower);
+  if (wantsFromScript) {
+    const ra = await act("read_document", "Lire le scénario");
+    const lines = classify(scenarioOf((await data.document(projectId))?.content as never));
+    await finish(ra, "done");
+    const scenes: { heading: string; action: string }[] = [];
+    for (const l of lines) {
+      if (l.type === "scene") scenes.push({ heading: l.text, action: "" });
+      else if (l.type === "action" && scenes.length && !scenes[scenes.length - 1].action) scenes[scenes.length - 1].action = l.text.replace(/\s+/g, " ");
+    }
+    if (!scenes.length) {
+      await say({ type: "text", text: "Je ne trouve aucune scène (INT. ou EXT.) dans le scénario de l'onglet Histoire. Écrivez-le ou importez-le, puis redemandez-moi." });
+      return;
+    }
+    const picked = scenes.slice(0, 6);
+    const c = await charge(picked.map(() => ({ kind: "image" as const, model: DEFAULT_MODEL.image })), `Lancer ${picked.length} plan${picked.length > 1 ? "s" : ""}`);
+    if (!c.ok) return;
+    const unit = await data.quote([{ kind: "image", model: DEFAULT_MODEL.image }]);
+    const sa = await act("create_section", "Créer une section par scénario");
+    const section: Section = {
+      id: crypto.randomUUID(), projectId, name: "Depuis le scénario", locked: false, collapsed: false,
+      x: 80, y: canvas.sections.reduce((m, s) => Math.max(m, s.y + s.h + 80), 80), ...sectionSize(project.aspectRatio, picked.length),
+    };
+    await data.upsertSection(section);
+    await finish(sa, "done");
+    const made: CanvasNode[] = [];
+    let refund = 0;
+    for (const [i, s] of picked.entries()) {
+      const prompt = s.action ? `${s.heading} — ${s.action}` : s.heading;
+      const name = `Scène ${i + 1}`;
+      const node: CanvasNode = {
+        id: crypto.randomUUID(), projectId, sectionId: section.id, type: "generator", name,
+        ...slot(project.aspectRatio, i), data: { action: "generate_image", prompt, model: DEFAULT_MODEL.image, status: "running" },
+      };
+      await data.upsertNode(node);
+      const a = await act("generate_image", `Générer « ${name} »`);
+      try {
+        const r = await gen.image({ prompt: applyStyle(prompt, style), model: DEFAULT_MODEL.image, aspectRatio: project.aspectRatio });
+        await data.upsertNode({ ...node, type: "image", data: { ...node.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height, styleName: style?.name } });
+        made.push(node);
+        pending.consume(projectId, turnId, unit);
+        await finish(a, "done");
+      } catch {
+        await data.upsertNode({ ...node, data: { ...node.data, status: "failed", error: "La génération n'a pas abouti. Les crédits de ce plan ont été rendus." } });
+        refund += unit;
+        await finish(a, "failed", "Ce plan n'a pas pu être généré. Ses crédits vous ont été rendus.");
+      }
+    }
+    if (refund) { await data.refund(refund, `${c.key}:refund`); pending.consume(projectId, turnId, refund); }
+    pending.clear(projectId, turnId);
+    await say(
+      { type: "text", text: `J'ai tiré ${made.length} plan${made.length > 1 ? "s" : ""} des ${scenes.length} scène${scenes.length > 1 ? "s" : ""} du scénario${scenes.length > picked.length ? " (les 6 premières)" : ""} : ` },
+      ...made.flatMap((n, i) => [
+        { type: "asset" as const, nodeId: n.id, kind: "image" as const, label: n.name },
+        { type: "text" as const, text: i < made.length - 1 ? ", " : ". " },
+      ]),
+      { type: "text", text: "Demandez-moi « monte le film » pour les mettre bout à bout." },
+    );
+    return;
+  }
 
   const wantsMusic = /musique|bande[- ]son|ambiance sonore/.test(lower);
   const wantsVoice = /\bvoix\b|narrat|voice[- ]?over|\bdis\b|\bdit\b|réplique/.test(lower);

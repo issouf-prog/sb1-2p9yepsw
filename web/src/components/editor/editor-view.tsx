@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Play, Pause, ZoomIn, ZoomOut, Scissors, Trash2, Upload, Sparkles, ArrowLeft, ArrowRight, Type, Maximize2,
+  Play, Pause, ZoomIn, ZoomOut, Scissors, Trash2, Upload, Sparkles, ArrowLeft, ArrowRight, Type, Maximize2, Captions,
 } from "lucide-react";
 import { data, ConflictError, type AudioClip, type CanvasNode, type Project, type Timeline, type TimelineClip } from "@/lib/data";
 import { useLive } from "@/hooks/use-live";
 import { buildTimeline } from "@/lib/agent/tools";
-import { clipAt, defaultDuration, move, splitAt, starts, timecode, totalMs, MIN_CLIP_MS } from "@/lib/timeline";
+import {
+  clipAt, defaultDuration, move, splitAt, starts, timecode, totalMs, MIN_CLIP_MS,
+  TRANSITIONS, TRANSITION_LABEL, DEFAULT_TRANSITION_MS, transitionAt, subtitlesFrom, type Layer,
+} from "@/lib/timeline";
+import type { TransitionKind } from "@/lib/data";
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -16,6 +20,12 @@ import { ResourceList } from "@/components/app/resource-list";
 import { useApp } from "@/components/app/app-context";
 
 const TABS = ["Ressources", "Sons", "Effets", "Transitions"] as const;
+const READY: (typeof TABS)[number][] = ["Ressources", "Transitions"];
+
+/** Style CSS d'une couche d'aperçu pendant une transition. */
+const layerStyle = (l: Layer): React.CSSProperties => ({
+  opacity: l.opacity, transform: l.x ? `translateX(${l.x * 100}%)` : undefined, clipPath: l.reveal < 1 ? `inset(0 ${(1 - l.reveal) * 100}% 0 0)` : undefined,
+});
 
 export function EditorView({ project }: { project: Project }) {
   const { ask } = useApp();
@@ -29,6 +39,7 @@ export function EditorView({ project }: { project: Project }) {
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Ressources");
   const dragFrom = useRef<number | null>(null);
 
   useEffect(() => { if (remote.value) setTl(remote.value); }, [remote.value]);
@@ -101,6 +112,26 @@ export function EditorView({ project }: { project: Project }) {
   const sel = tl?.main.find((c) => c.id === selected) ?? null;
   const selIndex = sel && tl ? tl.main.indexOf(sel) : -1;
 
+  const setTransition = (ids: string[], kind: TransitionKind | null, durationMs = DEFAULT_TRANSITION_MS) => {
+    if (!tl) return;
+    commit(tl.main.map((c, i) => (ids.includes(c.id) && i > 0 ? { ...c, transition: kind ? { kind, durationMs } : undefined } : c)));
+  };
+  const applyTransition = (kind: TransitionKind | null) => {
+    if (!tl) return;
+    if (!sel) return setNotice("Sélectionnez d'abord un clip de la piste principale, ou appliquez la transition à tous les raccords.");
+    if (selIndex === 0) return setNotice("Le premier clip n'a pas de plan avant lui : choisissez un clip suivant.");
+    setTransition([sel.id], kind, sel.transition?.durationMs);
+    setNotice(kind ? `${TRANSITION_LABEL[kind]} avant « ${nodes.get(sel.nodeId)?.name ?? "ce clip"} ».` : "Coupe franche rétablie.");
+  };
+
+  const autoSubtitles = () => {
+    if (!tl) return;
+    const subs = subtitlesFrom(audioClips, (id) => nodes.get(id)?.data.prompt);
+    if (!subs.length) return setNotice("Aucune voix off dans le montage : ajoutez-en une (ou demandez-la à l'agent), puis générez les sous-titres.");
+    commit(tl.main, [...tl.text.filter((x) => x.kind !== "subtitle"), ...subs]);
+    setNotice(`${subs.length} sous-titres générés depuis la voix off.`);
+  };
+
   const onKey = (e: React.KeyboardEvent) => {
     if ((e.target as HTMLElement).closest("input, textarea, select")) return;
     if (e.key === " ") { e.preventDefault(); setPlaying((p) => (playhead >= total ? (setPlayhead(0), true) : !p)); }
@@ -125,6 +156,8 @@ export function EditorView({ project }: { project: Project }) {
 
   const hit = clipAt(tl.main, Math.min(playhead, Math.max(0, total - 1)));
   const current = hit ? nodes.get(hit.clip.nodeId) : null;
+  const trans = transitionAt(tl.main, Math.min(playhead, Math.max(0, total - 1)));
+  const prevNode = trans ? nodes.get(trans.prev.nodeId) : null;
   const s = starts(tl.main);
   const width = Math.max(800, (total / 1000) * pxPerSec + 200);
 
@@ -134,12 +167,39 @@ export function EditorView({ project }: { project: Project }) {
         {/* Ressources */}
         <section aria-label="Ressources" data-tour="editor-resources" className="flex max-h-64 flex-col border-b border-border lg:max-h-none lg:w-96 lg:border-b-0 lg:border-r">
           <div role="tablist" className="flex gap-6 border-b border-border px-5">
-            {TABS.map((t, i) => (
-              <button key={t} role="tab" aria-selected={i === 0} disabled={i > 0} title={i > 0 ? "Bientôt" : undefined}
-                className={cn("py-3 text-nav uppercase", i === 0 ? "text-text" : "text-text-subtle")}>{t}</button>
-            ))}
+            {TABS.map((t) => {
+              const ready = READY.includes(t);
+              return (
+                <button key={t} role="tab" id={`tab-${t}`} aria-controls="editor-tabpanel" aria-selected={tab === t} disabled={!ready} title={ready ? undefined : "Bientôt"}
+                  onClick={() => setTab(t)}
+                  className={cn("py-3 text-nav uppercase", tab === t ? "text-text" : ready ? "text-text-muted hover:text-text" : "text-text-subtle")}>{t}</button>
+              );
+            })}
           </div>
-          <ResourceList nodes={canvas.value?.nodes ?? []} sections={sections} onAdd={add} />
+          <div id="editor-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="flex min-h-0 flex-1 flex-col">
+            {tab === "Ressources" ? (
+              <ResourceList nodes={canvas.value?.nodes ?? []} sections={sections} onAdd={add} />
+            ) : (
+              <div className="space-y-2 overflow-y-auto p-4">
+                <p className="text-sm text-text-muted">
+                  {sel && selIndex > 0 ? <>Transition avant <strong className="text-text">{nodes.get(sel.nodeId)?.name}</strong></> : "Sélectionnez un clip (pas le premier) pour choisir la transition qui l'amène."}
+                </p>
+                {TRANSITIONS.map((tr) => (
+                  <button key={tr.kind} onClick={() => applyTransition(tr.kind)} aria-pressed={sel?.transition?.kind === tr.kind}
+                    className={cn("block w-full border px-4 py-3 text-left hover:border-text", sel?.transition?.kind === tr.kind ? "border-text bg-surface-sunken" : "border-border")}>
+                    <span className="block">{tr.label}</span>
+                    <span className="block text-sm text-text-muted">{tr.desc}</span>
+                  </button>
+                ))}
+                <button onClick={() => applyTransition(null)} aria-pressed={!!sel && !sel.transition}
+                  className="block w-full border border-border px-4 py-3 text-left hover:border-text">Coupe franche (aucune)</button>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button size="sm" variant="secondary" disabled={tl.main.length < 2} onClick={() => { setTransition(tl.main.map((c) => c.id), "dissolve"); setNotice(`Fondu enchaîné sur ${tl.main.length - 1} raccord${tl.main.length > 2 ? "s" : ""}.`); }}>Fondu enchaîné partout</Button>
+                  <Button size="sm" variant="ghost" disabled={!tl.main.some((c) => c.transition)} onClick={() => { setTransition(tl.main.map((c) => c.id), null); setNotice("Toutes les transitions retirées."); }}>Tout retirer</Button>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Aperçu */}
@@ -152,13 +212,22 @@ export function EditorView({ project }: { project: Project }) {
             </div>
           ) : (
             <div className="relative max-h-full w-full max-w-3xl overflow-hidden bg-primary" style={{ aspectRatio: project.aspectRatio.replace(":", " / ") }}>
+              {trans && prevNode?.data.mediaUrl && (
+                <div className="absolute inset-0" style={layerStyle(trans.layers.prev)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={prevNode.data.posterUrl ?? prevNode.data.mediaUrl} alt="" className="size-full object-cover" />
+                </div>
+              )}
               {current?.data.mediaUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={current.data.posterUrl ?? current.data.mediaUrl} alt={current.name} className="absolute inset-0 size-full object-cover"
-                  style={current.type === "video" && hit ? { transform: `scale(${1 + 0.12 * hit.progress}) translateX(${-3 * hit.progress}%)` } : undefined} />
+                <div className="absolute inset-0" style={trans ? layerStyle(trans.layers.next) : undefined} data-transition={trans?.kind}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={current.data.posterUrl ?? current.data.mediaUrl} alt={current.name} className="size-full object-cover"
+                    style={current.type === "video" && hit ? { transform: `scale(${1 + 0.12 * hit.progress}) translateX(${-3 * hit.progress}%)` } : undefined} />
+                </div>
               )}
               {tl.text.filter((t) => playhead >= t.startMs && playhead < t.startMs + t.durationMs).map((t) => (
-                <p key={t.id} className="absolute bottom-[8%] left-1/2 -translate-x-1/2 bg-primary/55 px-4 py-1 text-xl text-on-primary">{t.text}</p>
+                <p key={t.id} className={cn("absolute left-1/2 max-w-[90%] -translate-x-1/2 text-center text-on-primary",
+                  t.kind === "subtitle" ? "bottom-[4%] bg-primary/70 px-3 py-0.5 text-base" : "bottom-[14%] bg-primary/55 px-4 py-1 text-xl")}>{t.text}</p>
               ))}
             </div>
           )}
@@ -175,6 +244,24 @@ export function EditorView({ project }: { project: Project }) {
                   onChange={(e) => { const v = Math.round(Number(e.target.value) * 1000); if (v >= MIN_CLIP_MS) commit(tl.main.map((c) => (c.id === sel.id ? { ...c, durationMs: v } : c))); }}
                   className="mt-1 h-10 w-full border border-border-input px-3 outline-none focus:border-text" />
               </label>
+              {selIndex > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="text-sm text-text-muted">Transition d&apos;entrée</span>
+                    <select value={sel.transition?.kind ?? ""} onChange={(e) => setTransition([sel.id], (e.target.value || null) as TransitionKind | null, sel.transition?.durationMs)}
+                      className="mt-1 h-10 w-full border border-border-input bg-surface px-2 outline-none focus:border-text">
+                      <option value="">Coupe franche</option>
+                      {TRANSITIONS.map((tr) => <option key={tr.kind} value={tr.kind}>{tr.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm text-text-muted">Durée (s)</span>
+                    <input type="number" min={0.2} max={2} step={0.1} disabled={!sel.transition} value={((sel.transition?.durationMs ?? DEFAULT_TRANSITION_MS) / 1000).toFixed(1)}
+                      onChange={(e) => { const v = Math.round(Number(e.target.value) * 1000); if (sel.transition && v >= 200 && v <= 2000) setTransition([sel.id], sel.transition.kind, v); }}
+                      className="mt-1 h-10 w-full border border-border-input px-3 outline-none focus:border-text disabled:opacity-45" />
+                  </label>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" disabled={selIndex <= 0} onClick={() => commit(move(tl.main, selIndex, selIndex - 1))}><ArrowLeft aria-hidden className="size-4" />Avant</Button>
                 <Button variant="secondary" size="sm" disabled={selIndex >= tl.main.length - 1} onClick={() => commit(move(tl.main, selIndex, selIndex + 1))}>Après<ArrowRight aria-hidden className="size-4" /></Button>
@@ -213,6 +300,7 @@ export function EditorView({ project }: { project: Project }) {
         <IconButton label="Ajouter un texte" shortcut="T" disabled={!total}
           icon={<Type className="size-5" />}
           onClick={async () => { const t = await ask({ title: "Ajouter un texte", label: "Texte affiché à la tête de lecture (2,5 s)", confirm: "Ajouter", multiline: true }); if (t) commit(tl.main, [...tl.text, { id: crypto.randomUUID(), text: t, startMs: playhead, durationMs: 2500 }]); }} />
+        <IconButton label="Sous-titres automatiques (depuis la voix off)" disabled={!total} icon={<Captions className="size-5" />} onClick={autoSubtitles} />
         <Button size="sm" variant="secondary" className="ml-2" data-tour="export" disabled={!total} onClick={() => setExporting(true)}><Upload aria-hidden className="size-4" />Exporter</Button>
       </div>
 
@@ -242,6 +330,10 @@ export function EditorView({ project }: { project: Project }) {
                         <img src={n.data.posterUrl ?? n.data.mediaUrl} alt="" className="absolute inset-0 size-full object-cover opacity-80" />
                       )}
                       <span className="absolute bottom-0 left-0 max-w-full truncate bg-primary/60 px-1 text-xs text-on-primary">{n?.name ?? "Plan manquant"}</span>
+                      {c.transition && i > 0 && (
+                        <span title={`${TRANSITION_LABEL[c.transition.kind]} · ${(c.transition.durationMs / 1000).toFixed(1)} s`} aria-label={`Transition : ${TRANSITION_LABEL[c.transition.kind]}`}
+                          className="absolute left-0 top-0 h-full bg-gradient-to-r from-accent/70 to-transparent" style={{ width: Math.min((c.transition.durationMs / 1000) * pxPerSec, (c.durationMs / 2000) * pxPerSec) }} />
+                      )}
                     </button>
                   </li>
                 );
@@ -255,7 +347,8 @@ export function EditorView({ project }: { project: Project }) {
                 <button key={t.id} title={t.text} onClick={() => setPlayhead(t.startMs)}
                   onDoubleClick={() => commit(tl.main, tl.text.filter((x) => x.id !== t.id))}
                   style={{ left: (t.startMs / 1000) * pxPerSec, width: (t.durationMs / 1000) * pxPerSec }}
-                  className="absolute h-full truncate bg-highlight px-1 text-left text-xs">{t.text}</button>
+                  aria-label={`${t.kind === "subtitle" ? "Sous-titre" : "Texte"} : ${t.text}`}
+                  className={cn("absolute h-full truncate border-r border-surface px-1 text-left text-xs", t.kind === "subtitle" ? "bg-surface-sunken" : "bg-highlight")}>{t.text}</button>
               ))}
             </div>
           </div>

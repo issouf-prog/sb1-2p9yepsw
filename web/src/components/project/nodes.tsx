@@ -165,7 +165,7 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
   const [resolution, setResolution] = useState<VideoResolution>(node.data.resolution ?? "720p");
   const [count, setCount] = useState<number>(node.data.count ?? 1);
   const [endFrame, setEndFrame] = useState("");
-  const [scene, setScene] = useState("");
+  const [scenes, setScenes] = useState<string[]>([]);
   const status = node.data.status ?? "idle";
   const batchable = kind === "image" || kind === "edit" || kind === "character";
   const cost = priceOf(kind, model, seconds, resolution, batchable ? count : 1);
@@ -209,7 +209,7 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
             if (canRun) actions.runGenerator(node, {
               prompt: prompt.trim(), model, voice: kind === "voice" ? voice : undefined,
               seconds: kind === "video" ? seconds : undefined, resolution: kind === "video" ? resolution : undefined,
-              endFrameId: endFrame || undefined, count: batchable ? count : 1, sceneId: scene || undefined,
+              endFrameId: endFrame || undefined, count: batchable ? count : 1, sceneIds: kind === "character" ? scenes : undefined,
             });
           }}
           className="nodrag w-[22rem] space-y-3 border border-border bg-surface p-3 shadow-pop"
@@ -256,13 +256,22 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
             </label>
           )}
           {kind === "character" && (
-            <label className="block">
-              <span className="text-xs text-text-muted">Scène de référence (facultatif)</span>
-              <select value={scene} onChange={(e) => setScene(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
-                <option value="">Aucune</option>
-                {others.filter((m) => m.type === "image").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </label>
+            <fieldset>
+              <legend className="text-xs text-text-muted">Scènes de référence (facultatif, 5 au plus) · {scenes.length} / 5</legend>
+              <div className="mt-1 max-h-28 space-y-1 overflow-y-auto border border-border-input p-2">
+                {others.filter((m) => m.type === "image").length === 0 && <p className="text-xs text-text-muted">Aucune image sur la toile.</p>}
+                {others.filter((m) => m.type === "image").map((m) => {
+                  const on = scenes.includes(m.id);
+                  return (
+                    <label key={m.id} className="flex items-center gap-2 text-sm" title={m.name}>
+                      <input type="checkbox" checked={on} disabled={!on && scenes.length >= 5}
+                        onChange={() => setScenes(on ? scenes.filter((x) => x !== m.id) : [...scenes, m.id])} />
+                      <span className="truncate">{m.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
           )}
           {batchable && (
             <fieldset>

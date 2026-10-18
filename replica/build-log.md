@@ -112,3 +112,22 @@ résolution 120/270/60 crédits, scène de référence, visite complète et non 
 43 tests, 86/86 avec `--repeat-each=2`, 0 erreur console, axe WCAG 2.1 AA sur le panneau en lot et la visite.
 
 Parité : 63,4 / 100 (global 57,1), indispensables 43 sur 60.
+
+## 6e passe (2026-10-18)
+
+| ID | état | fait | manque |
+| --- | --- | --- | --- |
+| S08 Panneau | fait | personnage : jusqu'à 5 scènes de référence (cases à cocher, compteur, 6e bloquée) | — |
+| S11 Histoire | partiel | import .fountain / .fdx / .docx / .txt (remplace le bloc Scénario, reste du document conservé, annulable) ; export PDF (impression mise en page), Word, Final Draft, Fountain ; rail des scènes cliquable | import PDF (serveur), saisie par type de ligne |
+| F06 Script to Film | fait | « fais les plans à partir du scénario » : un plan par scène (6 au plus), coût vérifié avant, échecs remboursés | — |
+| S15 Montage | partiel | onglet Transitions (fondu enchaîné, fondu au noir, volet, glissement), durée réglable, repère sur le clip, aperçu et export ; sous-titres auto depuis la voix off (regénérés sans doublon) ; l'agent ajoute fondus et sous-titres | effets, propriétés de clip, aimant |
+
+Vérifié hors navigateur : le .docx exporté est une archive zip valide (CRC contrôlés) et son XML, comme celui du
+.fdx, est bien formé.
+
+Tests : 8 nouveaux (import Fountain avec notes retirées et annulation, aller-retour Final Draft → Word → réimport,
+exports Fountain / Final Draft / PDF, refus PDF et fichier vide, Script to Film à 16 crédits, transition appliquée
+et conservée au rechargement avec refus sur le premier clip, sous-titres auto avec et sans voix off, agent fondus +
+sous-titres). Suite : 51 tests, 102/102 avec `--repeat-each=2`, 0 erreur console, axe sur Histoire et Transitions.
+
+Parité : 67,3 / 100 (global 60,2) ; la ligne « Import audio » était restée à « non » alors que l'import de sons existait, corrigée, indispensables 44 sur 60.

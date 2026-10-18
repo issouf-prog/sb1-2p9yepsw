@@ -157,15 +157,21 @@ export interface StoryDocument {
   updatedAt: string;
 }
 
+export type TransitionKind = "dissolve" | "black" | "wipe" | "slide";
+
 export interface TimelineClip {
   id: string;
   nodeId: string;
   /** Durée affichée dans le film, en ms. */
   durationMs: number;
+  /** Transition depuis le clip précédent, jouée au début de ce clip (absente = coupe franche). */
+  transition?: { kind: TransitionKind; durationMs: number };
 }
 
 export interface TextClip {
   id: string;
+  /** « subtitle » : généré depuis la voix off, remplacé à chaque nouvelle génération. */
+  kind?: "title" | "subtitle";
   text: string;
   startMs: number;
   durationMs: number;

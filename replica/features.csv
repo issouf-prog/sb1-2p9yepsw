@@ -19,7 +19,7 @@ Référence @asset dans les prompts,canvas,must,yes,yes,"clone: autocomplétion 
 Statut de génération sur le nœud (en cours terminé échec),images,must,yes,yes,
 Modèles verrouillés selon le plan,crédits,must,yes,yes,Run devient Upgrade | clone: cadenas + Passer au plan supérieur
 Edit Image,images,must,yes,yes,S09 | clone: Modifier l'image (simulé)
-Character Reference (≤5 perso ≤5 scène),images,must,yes,partial,"F03 | clone: 1 à 5 images perso + 1 scène de référence ; plan Créateur ; plusieurs scènes à venir"
+Character Reference (≤5 perso ≤5 scène),images,must,yes,yes,"F03 | clone: 1 à 5 images perso + jusqu'à 5 scènes de référence ; plan Créateur"
 Generate Video depuis une image (start frame),vidéo,must,yes,partial,F04 | clone: simulée : aperçu animé de l'image
 End frame optionnel,vidéo,must,yes,partial,selon modèle | clone: choix de l'image de fin ; non exploité par la simulation
 Choix du modèle vidéo durée résolution,vidéo,must,yes,yes,"clone: modèle, durée 5/10 s, résolution 480p/720p/1080p (×0,5 / ×1 / ×2,25)"
@@ -55,21 +55,21 @@ Generate Voice (text to voice),audio,should,yes,yes,F07 | clone: simulée (WAV s
 Sélecteur de voix avec filtres,audio,should,yes,partial,S14 | clone: 4 voix dans une liste ; filtres à venir
 Plusieurs speakers,audio,should,yes,no,
 Character Dialogue (lipsync),audio,should,yes,no,
-Import audio,audio,should,yes,no,
+Import audio,audio,should,yes,partial,"clone: import de sons (WAV, MP3…) sur la toile et dans le montage, 4 Mo au plus (stockage local) ; stockage en ligne avec le backend"
 Musique générée,audio,should,yes,yes,clone: simulée (WAV synthétisé)
 Effets sonores (SFX),audio,should,yes,no,
 Monteur : propriétés (échelle position volume vitesse fondus),monteur,should,yes,no,
-Monteur : transitions et effets,monteur,should,yes,no,
-Monteur : sous-titres générés,monteur,should,yes,no,
+Monteur : transitions et effets,monteur,should,yes,partial,"clone: fondu enchaîné, fondu au noir, volet, glissement (durée réglable, aperçu et export) ; effets à venir"
+Monteur : sous-titres générés,monteur,should,yes,yes,"clone: depuis le texte de la voix off, lignes de 42 caractères, regénérables ; aussi par l'agent"
 Monteur : aimant et magnétisme,monteur,should,yes,no,
 Exports récents et Download again,monteur,should,yes,yes,
-Éditeur de script (lignes typées rail des scènes),script,should,yes,no,S11
-Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,no,S12
-Export du script PDF et Word,script,should,yes,no,
+Éditeur de script (lignes typées rail des scènes),script,should,yes,partial,"S11 | clone: rail des scènes cliquable, lignes typées reconnues (scène, action, personnage, didascalie, dialogue, transition) ; pas de saisie par type"
+Import de script (.fountain .fdx .pdf .docx .txt),script,should,yes,partial,"S12 | clone: .fountain .fdx .docx .txt, annulable ; PDF à venir (côté serveur)"
+Export du script PDF et Word,script,should,yes,yes,"clone: PDF (impression mise en page), Word .docx, Final Draft .fdx, Fountain"
 Agent IA qui fait tout via appels d'outils (génère organise monte),agent,must,yes,partial,"S10 F00 cœur du produit | clone: agent simulé : Histoire, séquence, animation, montage, musique, voix off, fiche personnage ; Claude à brancher"
 Agent : pièces jointes et dictée vocale,agent,must,yes,yes,trombone et micro | clone: import + citation ; dictée fr-FR du navigateur
 Agent : Chat rules et Personalize,agent,should,yes,no,
-Script to Film,script,should,yes,no,F06
+Script to Film,script,should,yes,yes,"F06 | clone: l'agent tire un plan par scène (6 au plus), coût vérifié avant"
 Partage par email (can view / can edit),partage,should,yes,partial,S18 | clone: enregistré ; envoi d'e-mail avec le backend
 Lien de partage (none / view / edit),partage,should,yes,partial,clone: réglage + copie ; contrôle d'accès avec le backend
 Workspaces et rôles owner member guest,équipes,should,yes,no,S20

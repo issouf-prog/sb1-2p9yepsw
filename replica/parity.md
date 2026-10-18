@@ -1,26 +1,27 @@
 # Parité : Studio face à Flick
 
-Date : 2026-10-18 · Build : 7551904 · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
+Date : 2026-10-18 · Build : à venir (ce commit) · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
 
 ## Verdict : **pas encore livrable**
 
 | mesure | valeur |
 | --- | --- |
-| Score global | **57,1 / 100** (avant : 54,5) |
-| Fonctions | **63,4 / 100** (125 lignes comptées, indispensables : **43 sur 60**, avant : 38) |
+| Score global | **60,2 / 100** (avant : 57,1) |
+| Fonctions | **67,3 / 100** (125 lignes comptées, indispensables : **44 sur 60**, avant : 43) |
 | Mise en page | **31,9 / 100** sur 6 écrans (voir l'avertissement ci-dessous) |
 | Bugs S1 ouverts | 0 (S2 : 0) |
 
-Il manque 17 fonctions indispensables :
+Il manque 16 fonctions indispensables :
 - **15 dépendent du backend** : vraie connexion, Stripe, factures, stockage des fichiers, file de générations,
   vrais modèles image/vidéo, vrai agent Claude, rendu serveur, modération des sorties, etc.
-- **1 est du travail d'interface** : plusieurs scènes de référence (jusqu'à 5) pour les personnages ; le clone
-  en accepte une.
 - **1 est juridique** : faire relire les CGU et la politique de confidentialité.
 
-Construit dans ce passage : connexions manuelles entre nœuds, note comme prompt, lot 1× à 4×, scène de
-référence, résolution vidéo, visite guidée avec « Passer cette étape ». Suite e2e : 43 tests, 86/86 sur deux
-passages.
+Il ne reste plus d'indispensable faisable côté interface sans les clés.
+
+Construit dans ce passage : jusqu'à 5 scènes de référence ; import de scénario (.fountain, .fdx, .docx, .txt) et
+export (PDF, Word, Final Draft, Fountain) ; rail des scènes ; Script to Film par l'agent ; transitions du montage
+(fondu enchaîné, fondu au noir, volet, glissement) dans l'aperçu et l'export ; sous-titres générés depuis la voix
+off, aussi par l'agent. Suite e2e : 51 tests, 102/102 sur deux passages.
 
 ## Mise en page, écran par écran
 
@@ -52,19 +53,19 @@ l'apparence exacte de Flick est son habillage commercial, et `/replica-brand` va
 - 3d                             0.0  (6 features)
 - croissance                     0.0  (3 features)
 - galerie                        8.3  (6 features)
-- script                        30.8  (6 features)
 - facturation                   37.5  (4 features)
-- audio                         43.8  (8 features)
 - comptes                       45.0  (4 features)
 - sécurité                      50.0  (1 features)
 - légal                         50.0  (1 features)
-- images                        52.5  (8 features)
+- audio                         50.0  (8 features)
 - partage                       55.6  (5 features)
 - vidéo                         56.2  (6 features)
-- monteur                       66.2  (15 features)
+- images                        60.0  (8 features)
 - styles                        71.4  (3 features)
+- monteur                       74.3  (15 features)
 - assets                        75.0  (6 features)
 - agent                         76.7  (11 features)
+- script                        76.9  (6 features)
 - crédits                       84.4  (6 features)
 - canvas                        91.7  (15 features)
 - projets                      100.0  (7 features)
@@ -90,15 +91,12 @@ l'apparence exacte de Flick est son habillage commercial, et `/replica-brand` va
 
 ## Les cinq prochaines choses à construire
 
-1. **`/replica-backend`** : 15 des 17 indispensables manquants. Il faut tes clés Supabase, Anthropic, fal.ai,
-   ElevenLabs et Stripe : vraie connexion Google, données en ligne, stockage des fichiers, file de générations,
-   vrais modèles, vrai agent Claude, paiements, factures, rendu serveur.
+1. **`/replica-backend`** : 15 des 16 indispensables manquants. Il faut tes clés Supabase, Anthropic, fal.ai,
+   ElevenLabs et Stripe.
 2. **Relecture juridique** des CGU et de la politique de confidentialité.
-3. **Jusqu'à 5 scènes de référence** pour les personnages.
-4. **Import et export de scénario** (Histoire).
-5. **Transitions et sous-titres** dans le montage.
-
-Juste après viennent les équipes et le pool de crédits.
+3. **Propriétés de clip** dans le montage (échelle, position, volume, vitesse, fondus) et **volume par piste**.
+4. **Effets** du montage et **aimant / magnétisme** de la timeline.
+5. **Équipes et pool de crédits**, puis la **galerie** publique.
 
 ## Fonctions manquantes, dans l'ordre de construction
 - [must] facturation: Factures et annulation, no  (S22)
@@ -112,7 +110,6 @@ Juste après viennent les équipes et le pool de crédits.
 - [must] facturation: Fenêtre de recharge et upgrade, partial  (S31 | clone: recharge simulée)
 - [must] facturation: Plans d'abonnement Stripe mensuel et annuel, partial  (S21 | clone: choix du plan simulé ; Stripe à brancher)
 - [must] facturation: Recharge ponctuelle de crédits, partial  (F13 | clone: simulée ; Stripe à brancher)
-- [must] images: Character Reference (≤5 perso ≤5 scène), partial  (F03 | clone: 1 à 5 images perso + 1 scène de référence ; plan Créateur ; plusieurs scènes à venir)
 - [must] légal: Pages légales (CGU confidentialité), partial  (à toi pas copiées | clone: modèles de travail à faire relire par un juriste)
 - [must] monteur: Export 720p 1080p 4K avec rendu serveur, partial  (S16 | clone: 720p WebM avec son (VP9 + Opus) rendu dans le navigateur ; serveur à brancher)
 - [must] sécurité: Modération des prompts et sorties (flagged), partial  (obligatoire avant vente | clone: pré-contrôle des prompts, état signalé sans débit ; sorties à contrôler côté serveur)
@@ -133,13 +130,7 @@ Juste après viennent les équipes et le pool de crédits.
 - [should] images: Upscale image et vidéo, no
 - [should] monteur: Monteur : aimant et magnétisme, no
 - [should] monteur: Monteur : propriétés (échelle position volume vitesse fondus), no
-- [should] monteur: Monteur : sous-titres générés, no
-- [should] monteur: Monteur : transitions et effets, no
 - [should] monteur: Éditeur : volume par piste, no  (piste Principal)
-- [should] script: Export du script PDF et Word, no
-- [should] script: Import de script (.fountain .fdx .pdf .docx .txt), no  (S12)
-- [should] script: Script to Film, no  (F06)
-- [should] script: Éditeur de script (lignes typées rail des scènes), no  (S11)
 - [should] styles: Nœud : Enregistrer comme style, no  (S09b)
 - [should] vidéo: Extract Frame depuis une vidéo, no
 - [should] vidéo: Omni Reference (image vidéo audio), no  (Standard+)
@@ -148,10 +139,13 @@ Juste après viennent les équipes et le pool de crédits.
 - [should] audio: Sélecteur de voix avec filtres, partial  (S14 | clone: 4 voix dans une liste ; filtres à venir)
 - [should] canvas: Panneaux flottants Ressources et Histoire sur la toile, partial  (S11b S13 | clone: Ressources ; Histoire ouvre l'onglet)
 - [should] canvas: Sections (nom couleur verrou repli), partial  (S07 | clone: créer (S), grouper, replier, retirer ; couleur et verrou à venir)
+- [should] monteur: Monteur : transitions et effets, partial  (clone: fondu enchaîné, fondu au noir, volet, glissement (durée réglable, aperçu et export) ; effets à venir)
 - [should] monteur: Éditeur : filtres Tout Favoris Archivé Enregistré, partial  (S15 | clone: Tout + Favoris)
 - [should] partage: Lien de partage (none / view / edit), partial  (clone: réglage + copie ; contrôle d'accès avec le backend)
 - [should] partage: Partage par email (can view / can edit), partial  (S18 | clone: enregistré ; envoi d'e-mail avec le backend)
 - [should] script: Histoire : bloc scénario au format INT. EXT. dialogue, partial  (S11 | clone: bloc scénario en police machine ; pas encore de types de ligne)
+- [should] script: Import de script (.fountain .fdx .pdf .docx .txt), partial  (S12 | clone: .fountain .fdx .docx .txt, annulable ; PDF à venir (côté serveur))
+- [should] script: Éditeur de script (lignes typées rail des scènes), partial  (S11 | clone: rail des scènes cliquable, lignes typées reconnues (scène, action, personnage, didascalie, dialogue, transition) ; pas de saisie par type)
 - [could] 3d: 3D Stage (composants caméras gizmo), no  (S17)
 - [could] 3d: 3D Stage : Rehearse et Record vers le canvas, no  (F10)
 - [could] 3d: Nœud : Convertir en 3D, no  (S09b image vers plateau 3D)

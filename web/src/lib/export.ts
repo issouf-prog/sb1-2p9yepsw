@@ -1,7 +1,7 @@
 // Export simulé côté navigateur : dessine chaque plan sur un canvas et l'enregistre en WebM.
 // La vraie version rendra le film côté serveur avec FFmpeg (720p / 1080p / 4K).
 import type { CanvasNode, Timeline } from "./data/types";
-import { clipAt, totalMs } from "./timeline";
+import { clipAt, totalMs, transitionAt, type Layer } from "./timeline";
 
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((ok, ko) => {
@@ -71,25 +71,35 @@ export async function exportFilm(opts: {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, width, height);
     const hit = clipAt(timeline.main, ms);
+    const drawClip = (nodeId: string, progress: number, layer?: Layer) => {
+      const im = images.get(nodeId);
+      if (!im) return;
+      const isVideo = nodes.get(nodeId)?.type === "video";
+      const scale = Math.max(width / im.width, height / im.height) * (isVideo ? 1 + 0.12 * progress : 1);
+      const w = im.width * scale, h = im.height * scale;
+      const dx = (isVideo ? -0.03 * width * progress : 0) + (layer?.x ?? 0) * width;
+      ctx.save();
+      ctx.globalAlpha = layer?.opacity ?? 1;
+      if (layer && layer.reveal < 1) { ctx.beginPath(); ctx.rect(0, 0, width * layer.reveal, height); ctx.clip(); }
+      ctx.drawImage(im, (width - w) / 2 + dx, (height - h) / 2, w, h);
+      ctx.restore();
+    };
     if (hit) {
-      const im = images.get(hit.clip.nodeId);
-      const isVideo = nodes.get(hit.clip.nodeId)?.type === "video";
-      if (im) {
-        const scale = Math.max(width / im.width, height / im.height) * (isVideo ? 1 + 0.12 * hit.progress : 1);
-        const w = im.width * scale, h = im.height * scale;
-        const dx = isVideo ? -0.03 * width * hit.progress : 0;
-        ctx.drawImage(im, (width - w) / 2 + dx, (height - h) / 2, w, h);
-      }
+      const tr = transitionAt(timeline.main, ms);
+      if (tr) drawClip(tr.prev.nodeId, 1, tr.layers.prev);
+      drawClip(hit.clip.nodeId, hit.progress, tr?.layers.next);
     }
-    const t = timeline.text.find((x) => ms >= x.startMs && ms < x.startMs + x.durationMs);
-    if (t) {
-      ctx.font = `${Math.round(height / 18)}px sans-serif`;
+    for (const t of timeline.text.filter((x) => ms >= x.startMs && ms < x.startMs + x.durationMs)) {
+      const sub = t.kind === "subtitle";
+      const size = Math.round(height / (sub ? 24 : 18));
+      const y = height * (sub ? 0.94 : 0.84);
+      ctx.font = `${size}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(0,0,0,.55)";
+      ctx.fillStyle = sub ? "rgba(0,0,0,.7)" : "rgba(0,0,0,.55)";
       const m = ctx.measureText(t.text).width;
-      ctx.fillRect(width / 2 - m / 2 - 16, height * 0.86 - height / 18, m + 32, height / 12);
+      ctx.fillRect(width / 2 - m / 2 - 12, y - size, m + 24, size * 1.35);
       ctx.fillStyle = "#fff";
-      ctx.fillText(t.text, width / 2, height * 0.86);
+      ctx.fillText(t.text, width / 2, y);
     }
     if (watermark) {
       ctx.font = `${Math.round(height / 30)}px sans-serif`;

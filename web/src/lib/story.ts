@@ -47,3 +47,27 @@ export function storyFromIdea(idea: string, shots: string[]): N {
     ],
   };
 }
+
+type Doc = { type?: string; content?: Doc[]; attrs?: Record<string, unknown>; text?: string };
+
+/** Texte du bloc scénario du document (premier bloc de code « scenario », ou après le titre Scénario). */
+export function scenarioOf(doc: Doc | null | undefined): string {
+  const blocks = doc?.content ?? [];
+  const b = blocks.find((n) => n.type === "codeBlock" && n.attrs?.language === "scenario")
+    ?? blocks.slice(blocks.findIndex((n) => n.type === "heading" && (n.content ?? []).map((c) => c.text).join("") === "Scénario") + 1).find((n) => n.type === "codeBlock");
+  return (b?.content ?? []).map((c) => c.text ?? "").join("");
+}
+
+/** Remplace (ou ajoute) le bloc scénario, sans toucher au reste du document. */
+export function withScenario(doc: Doc | null | undefined, text: string): Doc {
+  const blocks = [...(doc?.content ?? (storyTemplate().content as Doc[]))];
+  const i = blocks.findIndex((n) => n.type === "codeBlock" && n.attrs?.language === "scenario");
+  const block = script(text) as Doc;
+  if (i >= 0) blocks[i] = block;
+  else {
+    const hi = blocks.findIndex((n) => n.type === "heading" && (n.content ?? []).map((c) => c.text).join("") === "Scénario");
+    if (hi >= 0) blocks.splice(hi + 1, 0, block);
+    else blocks.push(h("Scénario") as Doc, block);
+  }
+  return { type: "doc", content: blocks };
+}

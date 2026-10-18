@@ -208,7 +208,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   const actions: CanvasActions = {
     ratio: project.aspectRatio,
-    async runGenerator(node, { prompt: ownPrompt, model, voice, seconds, endFrameId, resolution, count = 1, sceneId }) {
+    async runGenerator(node, { prompt: ownPrompt, model, voice, seconds, endFrameId, resolution, count = 1, sceneIds = [] }) {
       const action = node.data.action ?? "generate_image";
       const kind = GEN_META[action].kind;
       // Le texte des notes reliées passe avant le prompt du nœud.
@@ -252,8 +252,10 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       }
       try {
         if (kind === "image" || kind === "character" || kind === "edit") {
-          const scene = sceneId ? byId.get(sceneId) : sources("scene_ref")[0];
-          if (sceneId) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: sceneId, to: node.id, role: "scene_ref" });
+          // Jusqu'à 5 scènes : celles choisies dans le panneau, sinon celles déjà reliées.
+          const chosen = sceneIds.map((id) => byId.get(id)).filter((n): n is CanvasNode => !!n?.data.mediaUrl);
+          const scenes = (chosen.length ? chosen : sources("scene_ref")).slice(0, 5);
+          for (const s of chosen.slice(0, 5)) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: s.id, to: node.id, role: "scene_ref" });
           const one = async (i: number) => {
             const variant = batch > 1 ? `${styled} (variante ${i + 1})` : styled;
             if (kind === "edit") {
@@ -264,7 +266,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
             const refs = [...sources("character_ref"), ...cited];
             if (kind === "character" && !refs.length) throw new Error("no_reference");
             return refs.length
-              ? gen.character({ prompt: variant, model: used, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })), scene: scene?.data.mediaUrl ? { url: scene.data.mediaUrl, name: scene.name } : undefined })
+              ? gen.character({ prompt: variant, model: used, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })), scenes: scenes.map((s) => ({ url: s.data.mediaUrl!, name: s.name })) })
               : gen.image({ prompt: variant, model: used, aspectRatio: project.aspectRatio });
           };
           const results = await Promise.allSettled(Array.from({ length: batch }, (_, i) => one(i)));

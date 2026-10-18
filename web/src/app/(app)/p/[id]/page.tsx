@@ -59,7 +59,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             {view === "canvas" ? (
               <Canvas project={project.value} state={canvas.value!} onSelectionChange={onSel} />
             ) : view === "story" ? (
-              <StoryView projectId={id} />
+              <StoryView projectId={id} projectName={project.value.name} />
             ) : view === "editor" ? (
               <EditorView project={project.value} />
             ) : (

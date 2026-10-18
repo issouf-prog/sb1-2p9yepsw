@@ -9,7 +9,7 @@ export interface GenProvider {
   image(input: { prompt: string; model: string; aspectRatio: AspectRatio }): Promise<ImageResult>;
   video(input: { prompt: string; model: string; startFrameUrl: string; aspectRatio: AspectRatio }): Promise<VideoResult>;
   /** Image du même personnage dans une nouvelle scène (références : 1 à 5 images). */
-  character(input: { prompt: string; model: string; references: { url: string; name: string; prompt?: string }[]; scene?: { url: string; name: string }; aspectRatio: AspectRatio }): Promise<ImageResult>;
+  character(input: { prompt: string; model: string; references: { url: string; name: string; prompt?: string }[]; scenes?: { url: string; name: string }[]; aspectRatio: AspectRatio }): Promise<ImageResult>;
   voice(input: { text: string; voice: string; model: string }): Promise<AudioResult>;
   /** Retouche d'une image existante selon une instruction. */
   edit(input: { instruction: string; model: string; source: { url: string; prompt?: string; name: string }; aspectRatio: AspectRatio }): Promise<ImageResult>;
@@ -120,12 +120,13 @@ export const simulatedGen: GenProvider = {
     void prompt;
     return { url: startFrameUrl, posterUrl: startFrameUrl, width: w, height: h, durationMs: 5000 };
   },
-  async character({ prompt, references, scene, aspectRatio }) {
+  async character({ prompt, references, scenes = [], aspectRatio }) {
     await wait(1100 + Math.random() * 900);
     // Simulation de la cohérence : la palette vient du personnage, la composition de la scène.
     const ref = references[0];
-    const label = `Aperçu simulé · ${ref?.name ?? "personnage"}${scene ? ` dans « ${scene.name} »` : ""}`;
-    return placeholderImage(scene ? `${scene.name} ${prompt}` : prompt, aspectRatio, label, ref?.prompt ?? ref?.name);
+    const where = scenes.map((s) => s.name).join(" + ");
+    const label = `Aperçu simulé · ${ref?.name ?? "personnage"}${where ? ` dans « ${where} »` : ""}`;
+    return placeholderImage(where ? `${where} ${prompt}` : prompt, aspectRatio, label, ref?.prompt ?? ref?.name);
   },
   async edit({ instruction, source, aspectRatio }) {
     await wait(900 + Math.random() * 600);

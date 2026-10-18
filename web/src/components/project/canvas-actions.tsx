@@ -12,7 +12,7 @@ export interface CanvasActions {
   upgrade(): void;
   editFrom(node: CanvasNode): Promise<void>;
   archive(node: CanvasNode): Promise<void>;
-  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string; seconds?: number; endFrameId?: string; resolution?: VideoResolution; count?: number; sceneId?: string }): Promise<void>;
+  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string; seconds?: number; endFrameId?: string; resolution?: VideoResolution; count?: number; sceneIds?: string[] }): Promise<void>;
   /** Texte des notes reliées à ce nœud (prompt par connexion). */
   linkedText(nodeId: string): string;
   characterFrom(node: CanvasNode): Promise<void>;

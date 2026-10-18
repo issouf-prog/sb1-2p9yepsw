@@ -75,15 +75,16 @@ test.describe("Connexions, lots, résolution, visite", () => {
     await deselectAll(page);
   });
 
-  test("CHAR-H1 personnage avec scène de référence", async ({ page }) => {
+  test("CHAR-H1 personnage avec scènes de référence", async ({ page }) => {
     await page.getByRole("group", { name: /^Plan rapproché/ }).first().click();
     const item = page.getByRole("menuitem", { name: /Personnage/ });
     test.skip(!(await item.count()), "menu personnage absent");
     await item.click();
-    const scene = page.getByLabel("Scène de référence (facultatif)");
-    test.skip(!(await scene.count()), "plan gratuit : personnage verrouillé");
-    await scene.selectOption({ label: (await scene.locator("option").nth(1).innerText()) });
-    await expect(scene).not.toHaveValue("");
+    const box = page.getByRole("group", { name: /Scènes de référence/ });
+    const checks = box.getByRole("checkbox");
+    await expect(checks.first()).toBeVisible();
+    await checks.first().check();
+    await expect(box).toContainText("1 / 5");
     await deselectAll(page);
   });
 });

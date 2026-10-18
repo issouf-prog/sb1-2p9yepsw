@@ -166,13 +166,13 @@ export function EditorView({ project }: { project: Project }) {
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Ressources */}
         <section aria-label="Ressources" data-tour="editor-resources" className="flex max-h-64 flex-col border-b border-border lg:max-h-none lg:w-96 lg:border-b-0 lg:border-r">
-          <div role="tablist" className="flex gap-6 border-b border-border px-5">
+          <div role="tablist" aria-label="Panneau du montage" className="flex gap-x-3 overflow-x-auto border-b border-border px-3">
             {TABS.map((t) => {
               const ready = READY.includes(t);
               return (
                 <button key={t} role="tab" id={`tab-${t}`} aria-controls="editor-tabpanel" aria-selected={tab === t} disabled={!ready} title={ready ? undefined : "Bientôt"}
                   onClick={() => setTab(t)}
-                  className={cn("py-3 text-nav uppercase", tab === t ? "text-text" : ready ? "text-text-muted hover:text-text" : "text-text-subtle")}>{t}</button>
+                  className={cn("shrink-0 py-3 text-nav uppercase tracking-[0.04em]", tab === t ? "text-text" : ready ? "text-text-muted hover:text-text" : "text-text-subtle")}>{t}</button>
               );
             })}
           </div>

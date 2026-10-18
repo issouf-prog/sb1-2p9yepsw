@@ -190,13 +190,17 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   const addGenerator = async (action: GenAction, from?: CanvasNode) => {
     const p = from ? await freePosition(from.sectionId, from.x + mediaSize(project.aspectRatio).w + 80, from.y) : centerPoint();
     const meta = GEN_META[action];
+    const id = crypto.randomUUID();
+    // Sélection posée avant l'écriture : la resynchronisation des données ne doit pas resélectionner la source.
+    setSelected(new Set([id]));
     const node: CanvasNode = {
-      id: crypto.randomUUID(), projectId: project.id, sectionId: from?.sectionId ?? null, type: "generator",
+      id, projectId: project.id, sectionId: from?.sectionId ?? null, type: "generator",
       name: meta.name, x: p.x, y: p.y,
       data: { action, model: AUTO, status: "idle" },
     };
     await data.upsertNode(node);
-    reveal(p.x, p.y, mediaSize(project.aspectRatio).w, mediaSize(project.aspectRatio).h + 360);
+    // Le panneau de réglages (22rem) s'ouvre sous le nœud : il doit tenir à l'écran lui aussi.
+    reveal(p.x, p.y, Math.max(mediaSize(project.aspectRatio).w, 380 / flow.getZoom()), mediaSize(project.aspectRatio).h + 380 / flow.getZoom());
     if (from) {
       const role = action === "character_ref" ? "character_ref" : action === "edit_image" ? "source" : "start_frame";
       await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role });

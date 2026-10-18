@@ -90,3 +90,20 @@ Status: fixed in 04812d8 (limite de mot Unicode).
 - Quand on ajoute beaucoup de nœuds au même endroit très vite, deux nœuds peuvent encore se toucher.
 - Export Safari / Firefox (MAN-7).
 - Après la mise à jour de React Flow, vérifier à l'œil le déplacement de sections contenant beaucoup de plans.
+
+## Trouvés en faisant les captures d'écran (2026-10-18)
+
+### BUG-006 · S3 · Section de l'agent posée sur des plans hors section
+Étapes : générer un lot 3× hors section, puis demander « fais les plans à partir du scénario ».
+Attendu : la nouvelle section sous tout le contenu. Obtenu : elle recouvrait une variante.
+Cause : la position ne tenait compte que des sections. Corrigé : `nextSectionY` (sections + plans libres).
+
+### BUG-007 · S4 · Onglet « Transitions » tronqué
+Étapes : ouvrir le montage avec le panneau de l'agent ouvert (1440 px). Obtenu : « TRANSIT ».
+Corrigé : espacement resserré et barre d'onglets défilante en dernier recours.
+
+### BUG-008 · S3 · Animer une image : panneau caché sous l'agent, menu de la source resté ouvert
+Étapes : sélectionner une image, « Animer cette image ». Obtenu : le panneau de réglages débordait sous le
+panneau de l'agent (bouton Lancer invisible) et le menu de l'image d'origine restait affiché.
+Cause : la resynchronisation des données reprenait l'ancienne sélection ; le recentrage ne comptait que le nœud.
+Corrigé : sélection posée avant l'écriture ; le recentrage inclut le panneau (22rem).

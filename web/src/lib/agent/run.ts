@@ -5,7 +5,7 @@
 import { data, InsufficientCreditsError, type ActionRecord, type CanvasNode, type ChatMessage, type ContentBlock, type Section } from "../data";
 import { DEFAULT_MODEL, musicDurationMs, VOICES } from "../data/prices";
 import { gen } from "../gen";
-import { sectionSize, slot } from "../canvas";
+import { nextSectionY, sectionSize, slot } from "../canvas";
 import { scenarioOf, storyFromIdea } from "../story";
 import { classify } from "../script";
 import { subtitlesFrom } from "../timeline";
@@ -196,7 +196,7 @@ async function turn({ projectId, conversationId, text, selectedNodeIds }: TurnIn
     const sa = await act("create_section", "Créer une section par scénario");
     const section: Section = {
       id: crypto.randomUUID(), projectId, name: "Depuis le scénario", locked: false, collapsed: false,
-      x: 80, y: canvas.sections.reduce((m, s) => Math.max(m, s.y + s.h + 80), 80), ...sectionSize(project.aspectRatio, picked.length),
+      x: 80, y: nextSectionY(project.aspectRatio, canvas.sections, canvas.nodes), ...sectionSize(project.aspectRatio, picked.length),
     };
     await data.upsertSection(section);
     await finish(sa, "done");
@@ -368,7 +368,7 @@ async function turn({ projectId, conversationId, text, selectedNodeIds }: TurnIn
     const sa = await act("create_section", "Créer une section");
     const section: Section = {
       id: crypto.randomUUID(), projectId, name: plan.section, locked: false, collapsed: false,
-      x: 80, y: canvas.sections.reduce((m, s) => Math.max(m, s.y + s.h + 80), 80), ...sectionSize(project.aspectRatio, 3),
+      x: 80, y: nextSectionY(project.aspectRatio, canvas.sections, canvas.nodes), ...sectionSize(project.aspectRatio, 3),
     };
     await data.upsertSection(section);
     await finish(sa, "done");

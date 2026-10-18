@@ -24,3 +24,17 @@ export function sectionSize(ratio: AspectRatio, count: number) {
   const { w, h } = mediaSize(ratio);
   return { w: GAP + count * (w + GAP), h: SECTION_HEADER + h + CAPTION + GAP };
 }
+
+/** Ordonnée d'une nouvelle section, sous tout le contenu de la toile (sections et plans hors section). */
+export function nextSectionY(
+  ratio: AspectRatio,
+  sections: { y: number; h: number }[],
+  nodes: { y: number; sectionId: string | null; data: { archived?: boolean } }[],
+) {
+  const { h } = mediaSize(ratio);
+  const bottoms = [
+    ...sections.map((s) => s.y + s.h),
+    ...nodes.filter((n) => !n.sectionId && !n.data.archived).map((n) => n.y + h + CAPTION),
+  ];
+  return bottoms.length ? Math.max(...bottoms) + SECTION_HEADER + GAP : 80;
+}

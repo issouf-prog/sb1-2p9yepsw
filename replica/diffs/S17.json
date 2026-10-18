@@ -1,0 +1,48 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 1840,
+    "height": 930
+  },
+  "clone": {
+    "width": 1840,
+    "height": 930
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 243
+  },
+  "height_delta_pct": 0.0,
+  "score": 29.3,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1380,
+      "h": 920,
+      "cells": 33,
+      "where": "middle centre"
+    },
+    {
+      "x": 1380,
+      "y": 0,
+      "w": 460,
+      "h": 766,
+      "cells": 9,
+      "where": "top right"
+    },
+    {
+      "x": 1073,
+      "y": 613,
+      "w": 153,
+      "h": 153,
+      "cells": 1,
+      "where": "bottom centre"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/S17-plateau-3d.png",
+    "clone": "replica/clone-screens/diff/S17.png"
+  }
+}

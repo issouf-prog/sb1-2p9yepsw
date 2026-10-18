@@ -1,0 +1,32 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 1849,
+    "height": 949
+  },
+  "clone": {
+    "width": 1849,
+    "height": 949
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 246
+  },
+  "height_delta_pct": 0.0,
+  "score": 31.4,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1849,
+      "h": 949,
+      "cells": 57,
+      "where": "middle centre"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/S15-editeur.png",
+    "clone": "replica/clone-screens/diff/S15.png"
+  }
+}

@@ -28,3 +28,6 @@ __pycache__/
 # captures de l original : reference locale uniquement, jamais commitees ni livrees
 replica/screens/*
 !replica/screens/.gitkeep
+
+# images de différence : dérivées des captures de l original, locales uniquement
+replica/diffs/*.png

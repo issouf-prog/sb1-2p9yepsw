@@ -1,0 +1,56 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 1840,
+    "height": 946
+  },
+  "clone": {
+    "width": 1840,
+    "height": 946
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 247
+  },
+  "height_delta_pct": 0.0,
+  "score": 39.5,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1226,
+      "h": 946,
+      "cells": 28,
+      "where": "middle left"
+    },
+    {
+      "x": 1380,
+      "y": 0,
+      "w": 460,
+      "h": 766,
+      "cells": 10,
+      "where": "top right"
+    },
+    {
+      "x": 613,
+      "y": 766,
+      "w": 613,
+      "h": 180,
+      "cells": 5,
+      "where": "bottom centre"
+    },
+    {
+      "x": 1226,
+      "y": 613,
+      "w": 153,
+      "h": 153,
+      "cells": 1,
+      "where": "bottom right"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/S11-histoire.png",
+    "clone": "replica/clone-screens/diff/S11.png"
+  }
+}

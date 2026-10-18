@@ -1,0 +1,48 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 1849,
+    "height": 952
+  },
+  "clone": {
+    "width": 1849,
+    "height": 952
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 247
+  },
+  "height_delta_pct": 0.0,
+  "score": 30.0,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1849,
+      "h": 952,
+      "cells": 52,
+      "where": "middle centre"
+    },
+    {
+      "x": 1232,
+      "y": 770,
+      "w": 154,
+      "h": 154,
+      "cells": 1,
+      "where": "bottom right"
+    },
+    {
+      "x": 1540,
+      "y": 770,
+      "w": 154,
+      "h": 154,
+      "cells": 1,
+      "where": "bottom right"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/S07-toile-agent.png",
+    "clone": "replica/clone-screens/diff/S07-916.png"
+  }
+}

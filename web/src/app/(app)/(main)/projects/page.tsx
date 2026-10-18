@@ -14,6 +14,7 @@ import { data, type Project } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { DEMO_FILMS } from "@/lib/seed/films";
 import { StylePicker } from "@/components/project/style-picker";
+import { startTour } from "@/components/app/guided-tour";
 import type { Style } from "@/lib/data";
 
 const EXAMPLES = [
@@ -51,7 +52,7 @@ function Home() {
           <Chip onClick={() => box.current?.setText("Crée la fiche de mon personnage principal : ")}>Créer des personnages</Chip>
           <Chip onClick={() => setPicking(true)}>Partir d&apos;un style</Chip>
           <Chip onClick={() => start()}>Toile vide</Chip>
-          <Chip title="Bientôt" aria-disabled className="opacity-60">Découvrir</Chip>
+          <Chip onClick={async () => { startTour(); setBusy(true); const p = await data.createProject({ aspectRatio: ratio, name: "Visite guidée" }); router.push(`/p/${p.id}?view=canvas&tour=1`); }}>Découvrir</Chip>
         </div>
       </section>
 

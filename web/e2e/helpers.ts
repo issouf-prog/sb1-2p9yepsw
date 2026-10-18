@@ -76,6 +76,7 @@ export async function addFromPlus(page: Page, item: string) {
 }
 
 export async function deselectAll(page: Page) {
-  await page.locator(".react-flow__node.selected").first().focus().catch(() => {});
+  const sel = page.locator(".react-flow__node.selected").first();
+  if (await sel.count()) await sel.focus();
   await page.keyboard.press("Escape");
 }

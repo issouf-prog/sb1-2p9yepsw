@@ -62,6 +62,10 @@ export interface CanvasNode {
     action?: "generate_image" | "generate_video" | "generate_voice" | "generate_music" | "character_ref" | "edit_image";
     /** Durée demandée pour une vidéo (s). */
     seconds?: number;
+    /** Résolution demandée pour une vidéo. */
+    resolution?: "480p" | "720p" | "1080p";
+    /** Nombre de résultats demandés (lot). */
+    count?: number;
     /** Style appliqué au moment de la génération. */
     styleName?: string;
     archived?: boolean;

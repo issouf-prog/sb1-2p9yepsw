@@ -28,6 +28,7 @@ export interface DataLayer {
   upsertNodes(ns: CanvasNode[]): Promise<void>;
   deleteNodes(ids: string[]): Promise<void>;
   addEdge(e: CanvasEdge): Promise<void>;
+  deleteEdges(ids: string[]): Promise<void>;
 
   deleteSection(id: string): Promise<void>;
 

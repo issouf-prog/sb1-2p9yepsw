@@ -52,6 +52,17 @@ export function lockedFor(kind: ModelKind, model: string, plan: PlanId): PlanId 
 /** Durées possibles d'une vidéo ; le prix des modèles est donné pour 5 s. */
 export const VIDEO_SECONDS = [5, 10] as const;
 
+/** Résolutions vidéo et multiplicateur de prix (le prix de base est en 720p). */
+export const VIDEO_RESOLUTIONS = [
+  { id: "480p", label: "480p (brouillon)", factor: 0.5, height: 480 },
+  { id: "720p", label: "720p", factor: 1, height: 720 },
+  { id: "1080p", label: "1080p", factor: 2.25, height: 1080 },
+] as const;
+export type VideoResolution = (typeof VIDEO_RESOLUTIONS)[number]["id"];
+
+/** Génération en lot : nombre de résultats par lancement. */
+export const BATCH_SIZES = [1, 2, 3, 4] as const;
+
 /** Voix proposées (noms fictifs, écrits pour ce projet). */
 export const VOICES = [
   { id: "claire", label: "Claire", desc: "femme, posée, narratrice", pitch: 220 },
@@ -60,11 +71,13 @@ export const VOICES = [
   { id: "victor", label: "Victor", desc: "homme âgé, grave", pitch: 100 },
 ] as const;
 
-export function priceOf(kind: ModelKind, model: string, seconds = 5): number {
+export function priceOf(kind: ModelKind, model: string, seconds = 5, resolution: VideoResolution = "720p", count = 1): number {
   const id = resolveModel(kind, model);
   const m = (MODELS[kind] as readonly { id: string; credits: number }[]).find((x) => x.id === id);
   if (!m) throw new Error(`modèle inconnu : ${model}`);
-  return kind === "video" ? Math.round((m.credits * seconds) / 5) : m.credits;
+  const factor = VIDEO_RESOLUTIONS.find((r) => r.id === resolution)?.factor ?? 1;
+  const unit = kind === "video" ? Math.round(((m.credits * seconds) / 5) * factor) : m.credits;
+  return unit * count;
 }
 
 export const musicDurationMs = (model: string) => (model === "music-30" ? 30000 : 15000);

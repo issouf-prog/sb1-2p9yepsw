@@ -188,8 +188,17 @@ export const fakeData: DataLayer = {
   },
   async addEdge(e) {
     const db = load();
+    // Pas de doublon : une même paire et un même rôle ne se relient qu'une fois.
+    if (db.edges.some((x) => x.from === e.from && x.to === e.to && x.role === e.role)) return;
     db.edges.push(clone(e));
     commit(e.projectId);
+  },
+  async deleteEdges(ids) {
+    const db = load();
+    const set = new Set(ids);
+    const projectId = db.edges.find((e) => set.has(e.id))?.projectId;
+    db.edges = db.edges.filter((e) => !set.has(e.id));
+    if (projectId) commit(projectId);
   },
 
   async deleteSection(id) {

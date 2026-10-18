@@ -1,23 +1,26 @@
 # Parité : Studio face à Flick
 
-Date : 2026-10-18 · Build : 846757d · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
+Date : 2026-10-18 · Build : à venir (ce commit) · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
 
 ## Verdict : **pas encore livrable**
 
 | mesure | valeur |
 | --- | --- |
-| Score global | **54,5 / 100** |
-| Fonctions | **60,1 / 100** (125 lignes comptées, indispensables : **38 sur 60**) |
+| Score global | **57,1 / 100** (avant : 54,5) |
+| Fonctions | **63,4 / 100** (125 lignes comptées, indispensables : **43 sur 60**, avant : 38) |
 | Mise en page | **31,9 / 100** sur 6 écrans (voir l'avertissement ci-dessous) |
 | Bugs S1 ouverts | 0 (S2 : 0) |
 
-Il manque 22 fonctions indispensables. Elles se répartissent ainsi :
+Il manque 17 fonctions indispensables :
 - **15 dépendent du backend** : vraie connexion, Stripe, factures, stockage des fichiers, file de générations,
   vrais modèles image/vidéo, vrai agent Claude, rendu serveur, modération des sorties, etc.
-- **6 sont du travail d'interface** encore possible sans backend : connexions manuelles entre nœuds, nœud
-  texte comme prompt, génération en lot (1× à 4×), scène de référence pour les personnages, résolution vidéo,
-  pilule « Découvrir » (visite guidée).
+- **1 est du travail d'interface** : plusieurs scènes de référence (jusqu'à 5) pour les personnages ; le clone
+  en accepte une.
 - **1 est juridique** : faire relire les CGU et la politique de confidentialité.
+
+Construit dans ce passage : connexions manuelles entre nœuds, note comme prompt, lot 1× à 4×, scène de
+référence, résolution vidéo, visite guidée avec « Passer cette étape ». Suite e2e : 43 tests, 86/86 sur deux
+passages.
 
 ## Mise en page, écran par écran
 
@@ -48,24 +51,24 @@ l'apparence exacte de Flick est son habillage commercial, et `/replica-brand` va
 - équipes                        0.0  (2 features)
 - 3d                             0.0  (6 features)
 - croissance                     0.0  (3 features)
-- onboarding                     0.0  (1 features)
 - galerie                        8.3  (6 features)
 - script                        30.8  (6 features)
 - facturation                   37.5  (4 features)
 - audio                         43.8  (8 features)
 - comptes                       45.0  (4 features)
-- images                        45.0  (8 features)
-- vidéo                         46.9  (6 features)
 - sécurité                      50.0  (1 features)
 - légal                         50.0  (1 features)
+- images                        52.5  (8 features)
 - partage                       55.6  (5 features)
+- vidéo                         56.2  (6 features)
 - monteur                       66.2  (15 features)
 - styles                        71.4  (3 features)
 - assets                        75.0  (6 features)
 - agent                         76.7  (11 features)
 - crédits                       84.4  (6 features)
-- canvas                        84.5  (15 features)
-- projets                       92.5  (7 features)
+- canvas                        91.7  (15 features)
+- projets                      100.0  (7 features)
+- onboarding                   100.0  (1 features)
 
 ## Comportements : ce que les scores ne voient pas
 
@@ -87,40 +90,32 @@ l'apparence exacte de Flick est son habillage commercial, et `/replica-brand` va
 
 ## Les cinq prochaines choses à construire
 
-1. **`/replica-backend`** : c'est le plus gros levier, avec 15 des 22 indispensables manquants. Il faut tes clés
-   Supabase, Anthropic, fal.ai, ElevenLabs et Stripe : vraie connexion Google, données en ligne, stockage des
-   fichiers, file de générations, vrais modèles, vrai agent Claude, paiements, factures, rendu serveur.
-2. **Connexions manuelles entre nœuds et nœud texte comme prompt** (toile) : relier une note ou une image à un
-   générateur en tirant un trait.
-3. **Génération en lot 1× à 4×** dans le panneau de génération, avec le coût multiplié.
-4. **Scène de référence** pour les personnages, et **choix de la résolution vidéo**.
-5. **Visite guidée** (pilule « Découvrir », « Passer cette étape ») et **relecture juridique** des CGU.
+1. **`/replica-backend`** : 15 des 17 indispensables manquants. Il faut tes clés Supabase, Anthropic, fal.ai,
+   ElevenLabs et Stripe : vraie connexion Google, données en ligne, stockage des fichiers, file de générations,
+   vrais modèles, vrai agent Claude, paiements, factures, rendu serveur.
+2. **Relecture juridique** des CGU et de la politique de confidentialité.
+3. **Jusqu'à 5 scènes de référence** pour les personnages.
+4. **Import et export de scénario** (Histoire).
+5. **Transitions et sous-titres** dans le montage.
 
-Juste après viennent les manques « importants » les plus visibles : import et export de scénario,
-transitions et sous-titres du montage, équipes et pool de crédits.
+Juste après viennent les équipes et le pool de crédits.
 
 ## Fonctions manquantes, dans l'ordre de construction
-
 - [must] facturation: Factures et annulation, no  (S22)
 - [must] infra: File de jobs asynchrone multi-fournisseurs, no  (via API officielles ou fal.ai/Replicate)
 - [must] agent: Agent : outils lire et modifier la timeline regarder un média, partial  (cartes d'action vues | clone: lire + monter ; regarder un média à venir)
 - [must] agent: Agent IA qui fait tout via appels d'outils (génère organise monte), partial  (S10 F00 cœur du produit | clone: agent simulé : Histoire, séquence, animation, montage, musique, voix off, fiche personnage ; Claude à brancher)
 - [must] assets: Upload d'images et de vidéos, partial  (S13 | clone: images, vidéos, sons ≤ 4 Mo (stockage local) ; glisser-déposer)
-- [must] canvas: Connexions entre nœuds (prompt start frame références), partial  (Edge | clone: start frame seulement)
 - [must] canvas: Nœud : lecteur vidéo inline, partial  (S09b | clone: aperçu simulé)
-- [must] canvas: Nœud texte comme prompt connectable, partial  (Disconnect | clone: note éditable ; pas encore connectable)
 - [must] comptes: Inscription et connexion email + Google, partial  (S02 | clone: simulée ; Supabase Auth à brancher)
 - [must] crédits: Solde de crédits et grand livre, partial  (CreditLedger | clone: solde + clés d'idempotence (simulé))
 - [must] facturation: Fenêtre de recharge et upgrade, partial  (S31 | clone: recharge simulée)
 - [must] facturation: Plans d'abonnement Stripe mensuel et annuel, partial  (S21 | clone: choix du plan simulé ; Stripe à brancher)
 - [must] facturation: Recharge ponctuelle de crédits, partial  (F13 | clone: simulée ; Stripe à brancher)
-- [must] images: Character Reference (≤5 perso ≤5 scène), partial  (F03 | clone: 1 à 5 images, réservé au plan Créateur ; scène de référence à venir)
-- [must] images: Nœud Generate Image (modèle prompt lot Run), partial  (S08 F02 | clone: modèle, prompt, Lancer ; pas de lot)
+- [must] images: Character Reference (≤5 perso ≤5 scène), partial  (F03 | clone: 1 à 5 images perso + 1 scène de référence ; plan Créateur ; plusieurs scènes à venir)
 - [must] légal: Pages légales (CGU confidentialité), partial  (à toi pas copiées | clone: modèles de travail à faire relire par un juriste)
 - [must] monteur: Export 720p 1080p 4K avec rendu serveur, partial  (S16 | clone: 720p WebM avec son (VP9 + Opus) rendu dans le navigateur ; serveur à brancher)
-- [must] projets: Accueil : puces de démarrage (script prompt personnages style toile vierge), partial  (S03 | clone: 5 sur 6 (Découvrir à venir))
 - [must] sécurité: Modération des prompts et sorties (flagged), partial  (obligatoire avant vente | clone: pré-contrôle des prompts, état signalé sans débit ; sorties à contrôler côté serveur)
-- [must] vidéo: Choix du modèle vidéo durée résolution, partial  (clone: modèle + durée 5/10 s ; résolution à venir)
 - [must] vidéo: End frame optionnel, partial  (selon modèle | clone: choix de l'image de fin ; non exploité par la simulation)
 - [must] vidéo: Generate Video depuis une image (start frame), partial  (F04 | clone: simulée : aperçu animé de l'image)
 - [should] agent: Agent : Chat rules et Personalize, no
@@ -141,7 +136,6 @@ transitions et sous-titres du montage, équipes et pool de crédits.
 - [should] monteur: Monteur : sous-titres générés, no
 - [should] monteur: Monteur : transitions et effets, no
 - [should] monteur: Éditeur : volume par piste, no  (piste Principal)
-- [should] onboarding: Visite guidée par onglet avec Passer cette étape, no  (S32 remplace la ligne Visite guidée)
 - [should] script: Export du script PDF et Word, no
 - [should] script: Import de script (.fountain .fdx .pdf .docx .txt), no  (S12)
 - [should] script: Script to Film, no  (F06)

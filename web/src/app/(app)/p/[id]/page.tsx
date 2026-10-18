@@ -11,6 +11,7 @@ import { Canvas } from "@/components/project/canvas";
 import { AgentPanel } from "@/components/project/agent-panel";
 import { StoryView } from "@/components/story/story-view";
 import { EditorView } from "@/components/editor/editor-view";
+import { GuidedTour } from "@/components/app/guided-tour";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -43,6 +44,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   return (
     <ReactFlowProvider>
       <div className="flex h-dvh flex-col">
+        <GuidedTour view={view} />
         <ProjectHeader project={project.value} view={view} />
         <div className="flex border-b border-border bg-surface lg:hidden" role="tablist" aria-label="Panneau affiché">
           {(["canvas", "agent"] as const).map((p) => (

@@ -132,7 +132,7 @@ export function EditorView({ project }: { project: Project }) {
     <div className="flex h-full flex-col bg-surface" onKeyDown={onKey}>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Ressources */}
-        <section aria-label="Ressources" className="flex max-h-64 flex-col border-b border-border lg:max-h-none lg:w-96 lg:border-b-0 lg:border-r">
+        <section aria-label="Ressources" data-tour="editor-resources" className="flex max-h-64 flex-col border-b border-border lg:max-h-none lg:w-96 lg:border-b-0 lg:border-r">
           <div role="tablist" className="flex gap-6 border-b border-border px-5">
             {TABS.map((t, i) => (
               <button key={t} role="tab" aria-selected={i === 0} disabled={i > 0} title={i > 0 ? "Bientôt" : undefined}
@@ -213,7 +213,7 @@ export function EditorView({ project }: { project: Project }) {
         <IconButton label="Ajouter un texte" shortcut="T" disabled={!total}
           icon={<Type className="size-5" />}
           onClick={async () => { const t = await ask({ title: "Ajouter un texte", label: "Texte affiché à la tête de lecture (2,5 s)", confirm: "Ajouter", multiline: true }); if (t) commit(tl.main, [...tl.text, { id: crypto.randomUUID(), text: t, startMs: playhead, durationMs: 2500 }]); }} />
-        <Button size="sm" variant="secondary" className="ml-2" disabled={!total} onClick={() => setExporting(true)}><Upload aria-hidden className="size-4" />Exporter</Button>
+        <Button size="sm" variant="secondary" className="ml-2" data-tour="export" disabled={!total} onClick={() => setExporting(true)}><Upload aria-hidden className="size-4" />Exporter</Button>
       </div>
 
       {/* Timeline */}

@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 import type { AspectRatio, CanvasNode } from "@/lib/data";
-import type { PlanId } from "@/lib/data/prices";
+import type { PlanId, VideoResolution } from "@/lib/data/prices";
 
 export interface CanvasActions {
   ratio: AspectRatio;
@@ -12,7 +12,9 @@ export interface CanvasActions {
   upgrade(): void;
   editFrom(node: CanvasNode): Promise<void>;
   archive(node: CanvasNode): Promise<void>;
-  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string; seconds?: number; endFrameId?: string }): Promise<void>;
+  runGenerator(node: CanvasNode, patch: { prompt: string; model: string; voice?: string; seconds?: number; endFrameId?: string; resolution?: VideoResolution; count?: number; sceneId?: string }): Promise<void>;
+  /** Texte des notes reliées à ce nœud (prompt par connexion). */
+  linkedText(nodeId: string): string;
   characterFrom(node: CanvasNode): Promise<void>;
   rename(node: CanvasNode): Promise<void>;
   animate(node: CanvasNode): Promise<void>;

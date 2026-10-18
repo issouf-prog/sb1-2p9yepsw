@@ -93,3 +93,22 @@ archiver → restaurer ; images/s conservées ; pages légales. Référence de p
 débloquée par le plan Créateur. Les 4 scénarios et le test mobile passent, 0 erreur console.
 
 Parité : 60,1 / 100, indispensables 38 sur 60.
+
+## 5e passe (2026-10-18)
+
+| ID | état | fait | manque |
+| --- | --- | --- | --- |
+| S07 Toile | fait | liaison manuelle par poignées visibles au survol (note → prompt, image → image de départ, source ou référence), lien supprimable au clavier, doublons ignorés ; vue recentrée sur un plan créé hors écran | — |
+| S08 Panneau | fait | lot 1× à 4× (variantes placées sans chevauchement, échec remboursé par unité), résolution vidéo 480p/720p/1080p (coût ×0,5/×1/×2,25), scène de référence du personnage, aperçu « Note reliée » | plusieurs scènes de référence |
+| S03 Accueil | fait | « Découvrir » crée un projet et lance la visite | — |
+| S32 Visite guidée | fait | bulles par vue (Toile 4, Histoire 1, Montage 2), Suivant / Passer cette étape / Vue suivante / Terminer / quitter, mémorisée, non bloquante | — |
+
+Bug trouvé par les tests et corrigé : un générateur ajouté par + pouvait apparaître hors de l'écran, sous les
+plans existants ; la vue se recentre désormais dessus. Aide de test `deselectAll` : n'attend plus un nœud
+sélectionné qui n'existe pas.
+
+Tests : 5 nouveaux (liaison note → générateur puis suppression du lien, lot de 3 = 24 crédits et 3 plans,
+résolution 120/270/60 crédits, scène de référence, visite complète et non relancée au rechargement). Suite :
+43 tests, 86/86 avec `--repeat-each=2`, 0 erreur console, axe WCAG 2.1 AA sur le panneau en lot et la visite.
+
+Parité : 63,4 / 100 (global 57,1), indispensables 43 sur 60.

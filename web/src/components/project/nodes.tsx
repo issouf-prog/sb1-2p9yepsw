@@ -10,7 +10,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { mediaSize } from "@/lib/canvas";
-import { MODELS, VOICES, AUTO, VIDEO_SECONDS, PLAN_LABEL, lockedFor, priceOf, type ModelKind } from "@/lib/data/prices";
+import { MODELS, VOICES, AUTO, VIDEO_SECONDS, VIDEO_RESOLUTIONS, BATCH_SIZES, PLAN_LABEL, lockedFor, priceOf, type ModelKind, type VideoResolution } from "@/lib/data/prices";
 import { MentionTextarea } from "@/components/ui/mention-textarea";
 import type { CanvasNode, Section } from "@/lib/data";
 import { useCanvasActions } from "./canvas-actions";
@@ -19,7 +19,8 @@ export type SectionRF = Node<{ section: Section }, "section">;
 export type MediaRF = Node<{ node: CanvasNode }, "media">;
 export type NoteRF = Node<{ node: CanvasNode }, "note">;
 
-const hidden = "!size-2 !min-h-0 !min-w-0 !border-0 !bg-transparent";
+/** Poignée de connexion : discrète, visible au survol du nœud ; tirer de la droite d'un plan vers la gauche d'un générateur. */
+const hidden = "!size-3 !min-h-0 !min-w-0 !border-2 !border-surface !bg-border-input opacity-0 transition-opacity group-hover/node:opacity-100";
 
 export function SectionNode({ data }: NodeProps<SectionRF>) {
   const { toggleSection, dissolveSection } = useCanvasActions();
@@ -68,7 +69,7 @@ export function MediaNode({ data, selected }: NodeProps<MediaRF>) {
 
   const isVideo = n.type === "video";
   return (
-    <div style={{ width: w }} className={cn("border bg-surface", selected ? "border-text" : "border-border")}>
+    <div style={{ width: w }} className={cn("group/node border bg-surface", selected ? "border-text" : "border-border")}>
       <Handle type="target" position={Position.Left} className={hidden} />
       <Handle type="source" position={Position.Right} className={hidden} />
 
@@ -161,9 +162,15 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
   const [model, setModel] = useState(node.data.model ?? AUTO);
   const [voice, setVoice] = useState(node.data.voice ?? VOICES[0].id);
   const [seconds, setSeconds] = useState<number>(node.data.seconds ?? 5);
+  const [resolution, setResolution] = useState<VideoResolution>(node.data.resolution ?? "720p");
+  const [count, setCount] = useState<number>(node.data.count ?? 1);
   const [endFrame, setEndFrame] = useState("");
+  const [scene, setScene] = useState("");
   const status = node.data.status ?? "idle";
-  const cost = priceOf(kind, model, seconds);
+  const batchable = kind === "image" || kind === "edit" || kind === "character";
+  const cost = priceOf(kind, model, seconds, resolution, batchable ? count : 1);
+  const linked = actions.linkedText(node.id);
+  const canRun = !!(prompt.trim() || linked);
   const lock = lockedFor(kind, model, actions.plan);
   const others = actions.media.filter((m) => m.id !== node.id);
   const running = status === "running";
@@ -171,7 +178,7 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
   const boxH = isAudio ? 120 : h;
 
   return (
-    <div style={{ width: isAudio ? 280 : w }}>
+    <div style={{ width: isAudio ? 280 : w }} className="group/node">
       <Handle type="target" position={Position.Left} className={hidden} />
       <Handle type="source" position={Position.Right} className={hidden} />
       <p className="mb-1 truncate text-sm text-text-muted" title={node.name}>{node.name}</p>
@@ -199,7 +206,11 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
           onSubmit={(e) => {
             e.preventDefault();
             if (lock) return actions.upgrade();
-            if (prompt.trim()) actions.runGenerator(node, { prompt: prompt.trim(), model, voice: kind === "voice" ? voice : undefined, seconds: kind === "video" ? seconds : undefined, endFrameId: endFrame || undefined });
+            if (canRun) actions.runGenerator(node, {
+              prompt: prompt.trim(), model, voice: kind === "voice" ? voice : undefined,
+              seconds: kind === "video" ? seconds : undefined, resolution: kind === "video" ? resolution : undefined,
+              endFrameId: endFrame || undefined, count: batchable ? count : 1, sceneId: scene || undefined,
+            });
           }}
           className="nodrag w-[22rem] space-y-3 border border-border bg-surface p-3 shadow-pop"
         >
@@ -214,15 +225,21 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
             </select>
           </label>
           {kind === "video" && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <label className="block">
-                <span className="text-xs text-text-muted">Durée</span>
-                <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
-                  {VIDEO_SECONDS.map((s) => <option key={s} value={s}>{s} secondes</option>)}
+                <span className="text-xs text-text-muted">Résolution</span>
+                <select value={resolution} onChange={(e) => setResolution(e.target.value as VideoResolution)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+                  {VIDEO_RESOLUTIONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-text-muted">Image de fin (facultatif)</span>
+                <span className="text-xs text-text-muted">Durée</span>
+                <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+                  {VIDEO_SECONDS.map((s) => <option key={s} value={s}>{s} s</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs text-text-muted">Image de fin</span>
                 <select value={endFrame} onChange={(e) => setEndFrame(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
                   <option value="">Aucune</option>
                   {others.filter((m) => m.type === "image").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -238,6 +255,31 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
               </select>
             </label>
           )}
+          {kind === "character" && (
+            <label className="block">
+              <span className="text-xs text-text-muted">Scène de référence (facultatif)</span>
+              <select value={scene} onChange={(e) => setScene(e.target.value)} className="mt-1 h-9 w-full border border-border-input bg-surface px-2 text-sm outline-none focus:border-text">
+                <option value="">Aucune</option>
+                {others.filter((m) => m.type === "image").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </label>
+          )}
+          {batchable && (
+            <fieldset>
+              <legend className="text-xs text-text-muted">Nombre de résultats</legend>
+              <div className="mt-1 inline-flex border border-border-input">
+                {BATCH_SIZES.map((n) => (
+                  <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)}
+                    className={cn("h-8 w-10 text-sm", count === n ? "bg-primary text-on-primary" : "hover:bg-surface-sunken")}>{n}×</button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          {linked && (
+            <p className="border-l-2 border-border-input pl-2 text-xs text-text-muted">
+              Note reliée : <span className="text-text">{linked.length > 120 ? `${linked.slice(0, 119)}…` : linked}</span>
+            </p>
+          )}
           <label className="block">
             <span className="text-xs text-text-muted">{ui.field}</span>
             <MentionTextarea value={prompt} onValueChange={setPrompt} nodes={others} rows={3} maxLength={2000}
@@ -247,7 +289,7 @@ function GeneratorNode({ node, selected, w, h }: { node: CanvasNode; selected: b
           </label>
           <div className="flex items-center justify-between gap-2">
             {lock ? <span className="text-xs text-text-muted">Modèle réservé au plan {PLAN_LABEL[lock]}</span> : <span />}
-            <Button type="submit" size="sm" cost={cost} locked={!!lock} disabled={!lock && !prompt.trim()}>Lancer</Button>
+            <Button type="submit" size="sm" cost={cost} locked={!!lock} disabled={!lock && !canRun}>Lancer</Button>
           </div>
         </form>
       </NodeToolbar>
@@ -271,7 +313,7 @@ function AudioNode({ node, selected }: { node: CanvasNode; selected: boolean }) 
   const isVoice = node.data.action === "generate_voice";
   const voice = VOICES.find((v) => v.id === node.data.voice);
   return (
-    <div className={cn("w-[280px] border bg-surface p-3", selected ? "border-text" : "border-border")}>
+    <div className={cn("group/node w-[280px] border bg-surface p-3", selected ? "border-text" : "border-border")}>
       <Handle type="target" position={Position.Left} className={hidden} />
       <Handle type="source" position={Position.Right} className={hidden} />
       <NodeToolbar isVisible={selected} position={Position.Right} align="start" offset={12}>
@@ -301,7 +343,8 @@ export function NoteNode({ data, selected }: NodeProps<NoteRF>) {
   const { update } = useCanvasActions();
   const n = data.node;
   return (
-    <div className={cn("w-60 border bg-highlight/60 p-3", selected ? "border-text" : "border-border")}>
+    <div className={cn("group/node w-60 border bg-highlight/60 p-3", selected ? "border-text" : "border-border")}>
+      <Handle type="source" position={Position.Right} className={hidden} />
       <label className="sr-only" htmlFor={`note-${n.id}`}>Note</label>
       <textarea id={`note-${n.id}`} defaultValue={n.data.prompt} rows={4} placeholder="Écrivez une note ou un prompt…"
         onBlur={(e) => e.target.value !== (n.data.prompt ?? "") && update({ ...n, data: { ...n.data, prompt: e.target.value } })}

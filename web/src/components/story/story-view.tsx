@@ -68,7 +68,7 @@ export function StoryView({ projectId }: { projectId: string }) {
           ))}
         </ul>
       </nav>
-      <div className="mx-auto max-w-3xl px-6 py-12 sm:px-10">
+      <div data-tour="story" className="mx-auto max-w-3xl px-6 py-12 sm:px-10">
         <p className="mb-6 text-right text-xs text-text-muted" aria-live="polite">
           {saved === "saving" ? "Enregistrement…" : saved === "saved" ? "Enregistré" : doc.value ? "" : "Modèle d'exemple"}
         </p>

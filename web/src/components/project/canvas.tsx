@@ -10,8 +10,8 @@ import { useRouter } from "next/navigation";
 import {
   Plus, MousePointer2, Hand, Type, Images, FileText, Clapperboard, Settings, Maximize, Upload, Image as ImageIcon, Video, Mic, Music, StickyNote, BoxSelect, X,
 } from "lucide-react";
-import { data, InsufficientCreditsError, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
-import { AUTO, DEFAULT_MODEL, priceOf, musicDurationMs, lockedFor, resolveModel, type ModelKind, type PlanId } from "@/lib/data/prices";
+import { data, InsufficientCreditsError, type CanvasEdge, type CanvasNode, type CanvasState, type Project } from "@/lib/data";
+import { AUTO, DEFAULT_MODEL, VIDEO_RESOLUTIONS, priceOf, musicDurationMs, lockedFor, resolveModel, type ModelKind, type PlanId } from "@/lib/data/prices";
 import { moderate, flaggedMessage } from "@/lib/moderation";
 import { applyStyle } from "@/lib/data/styles";
 import { mentionedNodes } from "@/components/ui/mention-textarea";
@@ -56,8 +56,31 @@ function toFlow(state: CanvasState, selected: Set<string>): Node[] {
   return [...sections, ...nodes];
 }
 
+const ROLE_LABEL: Record<string, string> = {
+  prompt: "Note utilisée comme prompt", start_frame: "Image de départ", end_frame: "Image de fin",
+  character_ref: "Référence de personnage", scene_ref: "Scène de référence", source: "Image à modifier",
+};
+
+/** Rôle d'un lien tiré à la main, selon ce qu'on relie à quoi ; null si la connexion n'a pas de sens. */
+export function connectionRole(source: CanvasNode | undefined, target: CanvasNode | undefined): CanvasEdge["role"] | null {
+  if (!source || !target || source.id === target.id || target.type !== "generator") return null;
+  // Une note peut servir de prompt à n'importe quel générateur.
+  if (source.type === "text") return "prompt";
+  if (source.type !== "image" && source.type !== "video") return null;
+  switch (target.data.action) {
+    case "generate_video": return source.type === "image" || source.type === "video" ? "start_frame" : null;
+    case "edit_image": return source.type === "image" ? "source" : null;
+    case "character_ref": return source.type === "image" ? "character_ref" : null;
+    case "generate_image": return source.type === "image" ? "character_ref" : null;
+    default: return null;
+  }
+}
+
 function toEdges(state: CanvasState): Edge[] {
-  return state.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, type: "default", selectable: false }));
+  return state.edges.map((e) => ({
+    id: e.id, source: e.from, target: e.to, type: "default", selectable: true, deletable: true,
+    ariaLabel: ROLE_LABEL[e.role] ?? "Lien",
+  }));
 }
 
 export function Canvas({ project, state, onSelectionChange }: { project: Project; state: CanvasState; onSelectionChange: (ids: string[]) => void }) {
@@ -67,7 +90,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   const { zoom } = useViewport();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges] = useEdgesState<Edge>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hand, setHand] = useState(false);
   const [preview, setPreview] = useState<CanvasNode | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -130,6 +153,16 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
     return { x: c.x, y };
   };
 
+  /** Recentre la vue sur un nouveau plan s'il tombe hors de l'écran. */
+  const reveal = (x: number, y: number, w: number, h: number) => {
+    const r = (document.querySelector(".react-flow") as HTMLElement | null)?.getBoundingClientRect();
+    if (!r) return;
+    const a = flow.flowToScreenPosition({ x, y });
+    const b = flow.flowToScreenPosition({ x: x + w, y: y + h });
+    if (a.x >= r.left && a.y >= r.top && b.x <= r.right && b.y <= r.bottom) return;
+    flow.setCenter(x + w / 2, y + h / 2, { zoom: flow.getZoom(), duration: 250 });
+  };
+
   type GenAction = NonNullable<CanvasNode["data"]["action"]>;
   const GEN_META: Record<GenAction, { name: string; kind: ModelKind }> = {
     generate_image: { name: "Nouvelle image", kind: "image" },
@@ -163,6 +196,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       data: { action, model: AUTO, status: "idle" },
     };
     await data.upsertNode(node);
+    reveal(p.x, p.y, mediaSize(project.aspectRatio).w, mediaSize(project.aspectRatio).h + 360);
     if (from) {
       const role = action === "character_ref" ? "character_ref" : action === "edit_image" ? "source" : "start_frame";
       await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: from.id, to: node.id, role });
@@ -174,25 +208,29 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
 
   const actions: CanvasActions = {
     ratio: project.aspectRatio,
-    async runGenerator(node, { prompt, model, voice, seconds, endFrameId }) {
+    async runGenerator(node, { prompt: ownPrompt, model, voice, seconds, endFrameId, resolution, count = 1, sceneId }) {
       const action = node.data.action ?? "generate_image";
       const kind = GEN_META[action].kind;
+      // Le texte des notes reliées passe avant le prompt du nœud.
+      const prompt = [actions.linkedText(node.id), ownPrompt].filter(Boolean).join(". ");
       // 1. Modération : refusé sans débit.
       const mod = moderate(prompt);
       if (!mod.ok) {
-        await data.upsertNode({ ...node, data: { ...node.data, prompt, status: "flagged", error: flaggedMessage(mod.reason) } });
+        await data.upsertNode({ ...node, data: { ...node.data, prompt: ownPrompt, status: "flagged", error: flaggedMessage(mod.reason) } });
         return;
       }
       // 2. Plan : un modèle verrouillé ne se lance pas.
       if (lockedFor(kind, model, plan)) return actions.upgrade();
       const used = resolveModel(kind, model);
+      const batch = kind === "image" || kind === "edit" || kind === "character" ? Math.max(1, Math.min(4, count)) : 1;
       const key = `gen:${node.id}:${Date.now()}`;
-      const cost = priceOf(kind, model, seconds);
+      const unit = priceOf(kind, model, seconds, resolution);
+      const cost = unit * batch;
       try {
         await data.spend(cost, key);
       } catch (e) {
         if (e instanceof InsufficientCreditsError) {
-          setNotice(`Il manque ${e.needed - e.available} crédits pour lancer ce plan. Rien n'a été débité.`);
+          setNotice(`Il manque ${e.needed - e.available} crédits pour lancer ${batch > 1 ? "ce lot" : "ce plan"}. Rien n'a été débité.`);
           openTopUp();
           return;
         }
@@ -200,7 +238,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       }
       const visual = kind === "image" || kind === "video" || kind === "character" || kind === "edit";
       const styled = visual ? applyStyle(prompt, style) : prompt;
-      const running = { ...node, data: { ...node.data, prompt, model, voice, seconds, styleName: visual ? style?.name : undefined, status: "running" as const, error: undefined } };
+      const running = { ...node, data: { ...node.data, prompt: ownPrompt || prompt, model, voice, seconds, resolution, count: batch, styleName: visual ? style?.name : undefined, status: "running" as const, error: undefined } };
       const stopWork = beginWork(project.id);
       pending.set(project.id, node.id, cost, key);
       await data.upsertNode(running);
@@ -214,20 +252,39 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
       }
       try {
         if (kind === "image" || kind === "character" || kind === "edit") {
-          let r;
-          if (kind === "edit") {
-            const src = sources("source")[0] ?? cited[0];
-            if (!src) throw new Error("no_source");
-            r = await gen.edit({ instruction: styled, model: used, aspectRatio: project.aspectRatio, source: { url: src.data.mediaUrl!, prompt: src.data.prompt, name: src.name } });
-          } else {
+          const scene = sceneId ? byId.get(sceneId) : sources("scene_ref")[0];
+          if (sceneId) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: sceneId, to: node.id, role: "scene_ref" });
+          const one = async (i: number) => {
+            const variant = batch > 1 ? `${styled} (variante ${i + 1})` : styled;
+            if (kind === "edit") {
+              const src = sources("source")[0] ?? cited[0];
+              if (!src) throw new Error("no_source");
+              return gen.edit({ instruction: variant, model: used, aspectRatio: project.aspectRatio, source: { url: src.data.mediaUrl!, prompt: src.data.prompt, name: src.name } });
+            }
             const refs = [...sources("character_ref"), ...cited];
             if (kind === "character" && !refs.length) throw new Error("no_reference");
-            r = refs.length
-              ? await gen.character({ prompt: styled, model: used, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })) })
-              : await gen.image({ prompt: styled, model: used, aspectRatio: project.aspectRatio });
+            return refs.length
+              ? gen.character({ prompt: variant, model: used, aspectRatio: project.aspectRatio, references: refs.slice(0, 5).map((n) => ({ url: n.data.mediaUrl!, name: n.name, prompt: n.data.prompt })), scene: scene?.data.mediaUrl ? { url: scene.data.mediaUrl, name: scene.name } : undefined })
+              : gen.image({ prompt: variant, model: used, aspectRatio: project.aspectRatio });
+          };
+          const results = await Promise.allSettled(Array.from({ length: batch }, (_, i) => one(i)));
+          const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+          const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+          if (!ok.length) throw firstErr?.reason ?? new Error("failed");
+          await data.upsertNode({ ...running, type: "image", data: { ...running.data, status: "done", mediaUrl: ok[0].url, width: ok[0].width, height: ok[0].height } });
+          // Variantes supplémentaires : nouveaux plans à côté, reliés aux mêmes références.
+          let y = node.y;
+          for (const [i, r] of ok.slice(1).entries()) {
+            const pos = await freePosition(node.sectionId, node.x, y);
+            y = pos.y;
+            await data.upsertNode({ ...running, id: crypto.randomUUID(), name: `${node.name} · variante ${i + 2}`, x: pos.x, y: pos.y, type: "image", data: { ...running.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
           }
-          await data.upsertNode({ ...running, type: "image", data: { ...running.data, status: "done", mediaUrl: r.url, width: r.width, height: r.height } });
-          if (!project.thumbnailUrl) await data.updateProject(project.id, { thumbnailUrl: r.url });
+          const failed = batch - ok.length;
+          if (failed) {
+            await data.refund(unit * failed, `${key}:partial`);
+            setNotice(`${ok.length} résultat${ok.length > 1 ? "s" : ""} sur ${batch} : ${unit * failed} crédits rendus pour ${failed > 1 ? "les échecs" : "l'échec"}.`);
+          }
+          if (!project.thumbnailUrl) await data.updateProject(project.id, { thumbnailUrl: ok[0].url });
         } else if (kind === "video") {
           const start = sources("start_frame")[0] ?? cited[0];
           const frame = start?.data.posterUrl ?? start?.data.mediaUrl;
@@ -235,7 +292,9 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           if (endFrameId) await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: endFrameId, to: node.id, role: "end_frame" });
           const r = await gen.video({ prompt: styled, model: used, startFrameUrl: frame, aspectRatio: project.aspectRatio });
           const durationMs = (seconds ?? 5) * 1000;
-          await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: r.width, height: r.height, durationMs } });
+          const h = VIDEO_RESOLUTIONS.find((x) => x.id === (resolution ?? "720p"))!.height;
+          const scale = h / Math.min(r.width, r.height);
+          await data.upsertNode({ ...running, type: "video", data: { ...running.data, status: "done", mediaUrl: r.url, posterUrl: r.posterUrl, width: Math.round(r.width * scale), height: Math.round(r.height * scale), durationMs } });
         } else {
           const r = kind === "voice"
             ? await gen.voice({ text: prompt, voice: voice ?? "claire", model: used })
@@ -254,6 +313,13 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
         pending.clear(project.id, node.id);
         stopWork();
       }
+    },
+    linkedText(nodeId) {
+      return state.edges
+        .filter((e) => e.to === nodeId && e.role === "prompt")
+        .map((e) => byId.get(e.from)?.data.prompt?.trim())
+        .filter(Boolean)
+        .join(". ");
     },
     plan,
     media: state.nodes.filter((n) => ["image", "video", "audio"].includes(n.type) && n.data.mediaUrl && !n.data.archived),
@@ -367,6 +433,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
   const addNote = async () => {
     const p = centerPoint();
     await data.upsertNode({ id: crypto.randomUUID(), projectId: project.id, sectionId: null, type: "text", name: "Note", x: p.x, y: p.y, data: { prompt: "" } });
+    reveal(p.x, p.y, 240, 120);
   };
 
   const empty = state.nodes.length === 0 && state.sections.length === 0;
@@ -395,6 +462,15 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           nodeTypes={nodeTypes}
           onNodesChange={onChange}
           onNodeDragStop={onDragStop}
+          isValidConnection={(c) => !!connectionRole(byId.get(c.source), byId.get(c.target))}
+          onConnect={async (c) => {
+            const role = connectionRole(byId.get(c.source), byId.get(c.target));
+            if (!role) return;
+            await data.addEdge({ id: crypto.randomUUID(), projectId: project.id, from: c.source, to: c.target, role });
+            setNotice(`Relié : ${ROLE_LABEL[role].toLowerCase()}.`);
+          }}
+          onEdgesDelete={(es) => data.deleteEdges(es.map((e) => e.id))}
+          onEdgesChange={onEdgesChange}
           panOnDrag={hand ? true : [1, 2]}
           selectionOnDrag={!hand}
           panOnScroll
@@ -414,7 +490,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           <VerticalToolbar zoom={Math.round(zoom * 100)}>
             <Menu>
               <MenuTrigger asChild>
-                <IconButton tone="solid" label="Ajouter" icon={<Plus className="size-5" />} />
+                <IconButton tone="solid" label="Ajouter" data-tour="add" icon={<Plus className="size-5" />} />
               </MenuTrigger>
               <MenuContent side="right">
                 <MenuItem icon={<Upload />} onSelect={() => fileInput.current?.click()}>Importer un fichier</MenuItem>
@@ -435,7 +511,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
             <IconButton label={selected.size ? "Grouper dans une section" : "Nouvelle section"} shortcut="S" onClick={createSection} icon={<BoxSelect className="size-5" />} />
             <IconButton label="Note" shortcut="T" onClick={addNote} icon={<Type className="size-5" />} />
             <ToolbarDivider />
-            <IconButton label="Ressources" active={showResources} onClick={() => setShowResources((v) => !v)} icon={<Images className="size-5" />} />
+            <IconButton label="Ressources" data-tour="resources" active={showResources} onClick={() => setShowResources((v) => !v)} icon={<Images className="size-5" />} />
             <IconButton label="Histoire" onClick={() => router.push(`/p/${project.id}?view=story`)} icon={<FileText className="size-5" />} />
             <IconButton label="Montage" onClick={() => router.push(`/p/${project.id}?view=editor`)} icon={<Clapperboard className="size-5" />} />
             <ToolbarDivider />
@@ -444,7 +520,7 @@ export function Canvas({ project, state, onSelectionChange }: { project: Project
           </VerticalToolbar>
         </div>
 
-        <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2">
+        <div data-tour="style" className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2">
           <label className="sr-only" htmlFor="project-ratio">Format du projet</label>
           <select id="project-ratio" value={project.aspectRatio} title="Format des prochaines générations"
             onChange={(e) => data.updateProject(project.id, { aspectRatio: e.target.value as Project["aspectRatio"] })}

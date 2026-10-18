@@ -135,7 +135,7 @@ export function AgentPanel({ projectId, selection, nodes, collapsed, onCollapse 
   }
 
   return (
-    <aside aria-label="Agent" className="flex h-full w-full flex-col border-l border-border bg-surface lg:w-[var(--size-agent-panel)]">
+    <aside aria-label="Agent" data-tour="agent" className="flex h-full w-full flex-col border-l border-border bg-surface lg:w-[var(--size-agent-panel)]">
       <div className="flex h-14 items-center gap-1 border-b border-border px-2">
         <IconButton label="Replier l'agent" icon={<ChevronsRight className="size-5" />} onClick={() => onCollapse(true)} />
         <Bot aria-hidden className="mx-1 size-5 text-text-muted" />

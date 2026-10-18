@@ -8,21 +8,21 @@ Choix du ratio (16:9 9:16 1:1 21:9 4:3 3:4 5:4),projets,must,yes,yes,épinglé e
 Catalogue de styles visuels,styles,must,yes,yes,"S05 avec tes propres presets | clone: 12 styles écrits pour ce projet, recherche"
 Canvas infini (pan zoom sélection rectangle),canvas,must,yes,yes,S07 | clone: React Flow
 Barre d'outils gauche (Add Node Hand/Select Section Text Assets Zoom),canvas,must,yes,yes,S07
-Nœud texte comme prompt connectable,canvas,must,yes,partial,Disconnect | clone: note éditable ; pas encore connectable
-Connexions entre nœuds (prompt start frame références),canvas,must,yes,partial,Edge | clone: start frame seulement
+Nœud texte comme prompt connectable,canvas,must,yes,yes,"Disconnect | clone: glisser la note sur un générateur, le texte devient le prompt (aperçu « Note reliée »)"
+Connexions entre nœuds (prompt start frame références),canvas,must,yes,yes,"Edge | clone: liaison manuelle par poignées (prompt, image de départ, source, référence), suppression au clavier"
 Copier coller supprimer des nœuds,canvas,must,yes,yes,"raccourcis | clone: Ctrl+C / Ctrl+V, Suppr, dupliquer"
 Raccourcis clavier (Entrée lance S T zoom),canvas,must,yes,yes,"clone: S, T, V, H, Ctrl+C/V, Ctrl+1, Suppr ; Entrée lance dans le panneau"
 Sauvegarde automatique du canvas,canvas,must,yes,yes,clone: positions et contenus
-Nœud Generate Image (modèle prompt lot Run),images,must,yes,partial,"S08 F02 | clone: modèle, prompt, Lancer ; pas de lot"
+Nœud Generate Image (modèle prompt lot Run),images,must,yes,yes,"S08 F02 | clone: modèle, prompt, lot 1×–4× (variantes, remboursement par unité), Lancer"
 Coût affiché sur le bouton Run avant génération,crédits,must,yes,yes,
 Référence @asset dans les prompts,canvas,must,yes,yes,"clone: autocomplétion @, plans cités reliés comme références"
 Statut de génération sur le nœud (en cours terminé échec),images,must,yes,yes,
 Modèles verrouillés selon le plan,crédits,must,yes,yes,Run devient Upgrade | clone: cadenas + Passer au plan supérieur
 Edit Image,images,must,yes,yes,S09 | clone: Modifier l'image (simulé)
-Character Reference (≤5 perso ≤5 scène),images,must,yes,partial,"F03 | clone: 1 à 5 images, réservé au plan Créateur ; scène de référence à venir"
+Character Reference (≤5 perso ≤5 scène),images,must,yes,partial,"F03 | clone: 1 à 5 images perso + 1 scène de référence ; plan Créateur ; plusieurs scènes à venir"
 Generate Video depuis une image (start frame),vidéo,must,yes,partial,F04 | clone: simulée : aperçu animé de l'image
 End frame optionnel,vidéo,must,yes,partial,selon modèle | clone: choix de l'image de fin ; non exploité par la simulation
-Choix du modèle vidéo durée résolution,vidéo,must,yes,partial,clone: modèle + durée 5/10 s ; résolution à venir
+Choix du modèle vidéo durée résolution,vidéo,must,yes,yes,"clone: modèle, durée 5/10 s, résolution 480p/720p/1080p (×0,5 / ×1 / ×2,25)"
 Modèle Auto,vidéo,must,yes,yes,
 Upload d'images et de vidéos,assets,must,yes,partial,"S13 | clone: images, vidéos, sons ≤ 4 Mo (stockage local) ; glisser-déposer"
 Panneau Assets du projet,assets,must,yes,yes,clone: panneau Ressources flottant + montage
@@ -96,7 +96,7 @@ Agent : vérifier le coût total avant un lot,agent,must,no,yes,amélioration : 
 Agent : messages d'erreur humains avec bouton d'action,agent,must,no,yes,amélioration : Flick affiche l'erreur technique brute
 Agent : puces de suggestion,agent,should,yes,yes,ex. Revoir le raccord d'abord
 Agent : sélecteur de modèle Auto,agent,should,yes,no,
-Accueil : puces de démarrage (script prompt personnages style toile vierge),projets,must,yes,partial,S03 | clone: 5 sur 6 (Découvrir à venir)
+Accueil : puces de démarrage (script prompt personnages style toile vierge),projets,must,yes,yes,"S03 | clone: 6 sur 6 (Découvrir lance la visite guidée)"
 Projets récents avec lien Tous les projets,projets,must,yes,yes,S03
 Barre globale (onglets bouton Créer badge crédits avatar),comptes,must,yes,yes,S04b
 Fenêtre de recharge et upgrade,facturation,must,yes,partial,S31 | clone: recharge simulée
@@ -113,7 +113,7 @@ Histoire : bloc scénario au format INT. EXT. dialogue,script,should,yes,partial
 Plateau 3D : scène par défaut 1 caméra + 1 humain,3d,could,yes,no,S17
 Plateau 3D : blocs d'action sur la timeline (Orbite),3d,could,yes,no,S17
 Plateau 3D : bascule 3D / 2D et Scène / Caméras,3d,could,yes,no,S17
-Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,no,S32 remplace la ligne Visite guidée
+Visite guidée par onglet avec Passer cette étape,onboarding,should,yes,yes,"S32 | clone: Toile, Histoire, Montage ; Suivant, Passer cette étape, Terminer ; mémorisée"
 Agent : outils lire et modifier la timeline regarder un média,agent,must,yes,partial,cartes d'action vues | clone: lire + monter ; regarder un média à venir
 Agent : répond toujours dans la langue de l'utilisateur,agent,must,no,partial,amélioration : Flick répond en anglais à un utilisateur français | clone: agent simulé en français
 Nœud : barre flottante (favori archiver renommer télécharger plein écran dupliquer),canvas,must,yes,yes,S09b vu

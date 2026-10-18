@@ -31,3 +31,6 @@ replica/screens/*
 
 # images de différence : dérivées des captures de l original, locales uniquement
 replica/diffs/*.png
+
+# Captures du parcours (générées localement)
+captures/

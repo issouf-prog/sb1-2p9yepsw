@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="5">
+  <Content>
+    <Paragraph Type="Scene Heading"><Text>int. atelier - jour</Text></Paragraph>
+    <Paragraph Type="Action"><Text>Des copeaux de bois volent dans la lumière.</Text></Paragraph>
+    <Paragraph Type="Character"><Text>Marc</Text></Paragraph>
+    <Paragraph Type="Dialogue"><Text>Encore une planche et c'est fini.</Text></Paragraph>
+  </Content>
+</FinalDraft>

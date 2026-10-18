@@ -1,6 +1,6 @@
 # Parité : Studio face à Flick
 
-Date : 2026-10-18 · Build : à venir (ce commit) · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
+Date : 2026-10-18 · Build : 7551904 · Outils : `parity.py`, `imgdiff.py` (mode mise en page, couleurs ignorées).
 
 ## Verdict : **pas encore livrable**
 
